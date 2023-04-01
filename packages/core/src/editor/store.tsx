@@ -32,7 +32,7 @@ export const editorInitialState: EditorState = {
     handlers: (store) =>
       new DefaultEventHandlers({
         store,
-        isMultiSelectEnabled: (e: MouseEvent) => !!e.metaKey,
+        isMultiSelectEnabled: (e: MouseEvent) => !!e.shiftKey,
       }),
     normalizeNodes: () => {},
   },
