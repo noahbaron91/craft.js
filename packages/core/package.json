@@ -1,6 +1,6 @@
 {
   "name": "@noahbaron91/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A React Framework for building extensible drag and drop page editors",
   "keywords": [
     "react",
