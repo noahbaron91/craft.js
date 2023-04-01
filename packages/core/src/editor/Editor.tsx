@@ -2,7 +2,8 @@ import {
   ERROR_RESOLVER_NOT_AN_OBJECT,
   HISTORY_ACTIONS,
 } from '@noahbaron91/utils';
-import React, { useEffect, useRef } from 'react';
+import { pickBy } from 'lodash';
+import React, { useEffect, useMemo } from 'react';
 import invariant from 'tiny-invariant';
 
 import { EditorContext } from './EditorContext';
@@ -16,20 +17,37 @@ import { Options } from '../interfaces';
  */
 export const Editor: React.FC<React.PropsWithChildren<Partial<Options>>> = ({
   children,
-  ...options
+  onRender,
+  onNodesChange,
+  onBeforeMoveEnd,
+  resolver,
+  enabled,
+  indicator,
 }) => {
   // we do not want to warn the user if no resolver was supplied
-  if (options.resolver !== undefined) {
+  if (resolver !== undefined) {
     invariant(
-      typeof options.resolver === 'object' && !Array.isArray(options.resolver),
+      typeof resolver === 'object' && !Array.isArray(resolver),
       ERROR_RESOLVER_NOT_AN_OBJECT
     );
   }
 
-  const optionsRef = useRef(options);
+  const options = useMemo(() => {
+    return pickBy(
+      {
+        onRender,
+        onNodesChange,
+        onBeforeMoveEnd,
+        resolver,
+        enabled,
+        indicator,
+      },
+      (value) => value !== undefined
+    );
+  }, [enabled, indicator, onBeforeMoveEnd, onNodesChange, onRender, resolver]);
 
   const context = useEditorStore(
-    optionsRef.current,
+    options,
     (state, previousState, actionPerformedWithPatches, query, normalizer) => {
       if (!actionPerformedWithPatches) {
         return;
@@ -73,20 +91,13 @@ export const Editor: React.FC<React.PropsWithChildren<Partial<Options>>> = ({
     }
   );
 
-  // sync enabled prop with editor store options
   useEffect(() => {
-    if (!context) {
-      return;
+    if (context && options) {
+      context.actions.setOptions((editorOptions) => {
+        Object.assign(editorOptions, options);
+      });
     }
-
-    if (context.query.getOptions().enabled === options.enabled) {
-      return;
-    }
-
-    context.actions.setOptions((editorOptions) => {
-      editorOptions.enabled = options.enabled;
-    });
-  }, [context, options.enabled]);
+  }, [context, options]);
 
   useEffect(() => {
     context.subscribe(
