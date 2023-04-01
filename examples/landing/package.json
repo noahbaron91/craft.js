@@ -1,6 +1,6 @@
 {
   "name": "example-landing",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "scripts": {
     "start": "next dev -p 3001",
@@ -11,7 +11,7 @@
   "dependencies": {
     "@material-ui/core": "4.5.2",
     "@material-ui/icons": "4.5.1",
-    "@noahbaron91/core": "^0.2.1",
+    "@noahbaron91/core": "^0.2.2",
     "@noahbaron91/layers": "^0.2.0",
     "autoprefixer": "latest",
     "classnames": "2.2.6",
