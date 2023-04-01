@@ -5,7 +5,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.2.0-beta.8](https://github.com/prevwong/craft.js/compare/v0.2.0-beta.7...v0.2.0-beta.8) (2022-08-30)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -25,7 +25,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.2.0-beta.6](https://github.com/prevwong/craft.js/compare/v0.2.0-beta.5...v0.2.0-beta.6) (2022-06-21)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -33,7 +33,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.2.0-beta.5](https://github.com/prevwong/craft.js/compare/v0.2.0-beta.4...v0.2.0-beta.5) (2022-05-31)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -52,7 +52,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.2.0-beta.3](https://github.com/prevwong/craft.js/compare/v0.2.0-beta.2...v0.2.0-beta.3) (2022-03-07)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -60,7 +60,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.2.0-beta.2](https://github.com/prevwong/craft.js/compare/v0.2.0-beta.1...v0.2.0-beta.2) (2022-01-17)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -68,7 +68,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.2.0-beta.1](https://github.com/prevwong/craft.js/compare/v0.2.0-beta.0...v0.2.0-beta.1) (2022-01-11)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -76,7 +76,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.2.0-beta.0](https://github.com/prevwong/craft.js/compare/v0.2.0-alpha.28...v0.2.0-beta.0) (2021-11-16)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -84,7 +84,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.2.0-alpha.28](https://github.com/prevwong/craft.js/compare/v0.2.0-alpha.27...v0.2.0-alpha.28) (2021-10-04)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -168,7 +168,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.21 (2021-03-22)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -198,7 +198,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.18 (2021-03-11)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -228,7 +228,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.15 (2021-02-11)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -236,7 +236,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.14 (2021-02-08)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -321,7 +321,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.6 (2021-01-06)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -329,7 +329,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.5 (2021-01-06)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -337,7 +337,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.4 (2021-01-06)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -345,7 +345,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.3 (2021-01-04)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
 
 
 
@@ -364,4 +364,4 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # 0.2.0-alpha.1 (2020-12-04)
 
-**Note:** Version bump only for package @craftjs/utils
+**Note:** Version bump only for package @noahbaron91/utils
