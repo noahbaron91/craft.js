@@ -1,4 +1,4 @@
-import { isChromium, isLinux } from '@noahbaron91/utils';
+import { ROOT_NODE, isChromium, isLinux } from '@noahbaron91/utils';
 import { isFunction } from 'lodash';
 import React from 'react';
 
@@ -139,31 +139,6 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
         };
       },
       drop: (el: HTMLElement, targetId: NodeId) => {
-        const unbindDragOver = this.addCraftEventListener(
-          el,
-          'dragover',
-          (e) => {
-            e.craft.stopPropagation();
-            e.preventDefault();
-
-            if (!this.positioner) {
-              return;
-            }
-
-            const indicator = this.positioner.computeIndicator(
-              targetId,
-              e.clientX,
-              e.clientY
-            );
-
-            if (!indicator) {
-              return;
-            }
-
-            store.actions.setIndicator(indicator);
-          }
-        );
-
         const unbindDragEnter = this.addCraftEventListener(
           el,
           'dragenter',
@@ -175,7 +150,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
         return () => {
           unbindDragEnter();
-          unbindDragOver();
+          // unbindDragOver();
         };
       },
       drag: (el: HTMLElement, id: NodeId) => {
@@ -183,80 +158,181 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           return () => {};
         }
 
-        el.setAttribute('draggable', 'true');
+        // Calculates the transform of the dragged element
+        const calculateTransform = (event: MouseEvent) => {
+          const parent = store.query.node(id).ancestors(false)[0];
+          let canvasWrapper: HTMLElement;
+
+          if (parent === ROOT_NODE) {
+            canvasWrapper = document.getElementById('global-frame');
+          } else {
+            canvasWrapper = store.query.node(parent).get().dom;
+          }
+
+          const { scale } = store.query.getViewport();
+          const { x, y } = canvasWrapper.getBoundingClientRect();
+
+          // Gets position relative to canvas wrapper
+          const translateX = -x / scale + event.clientX / scale;
+          const translateY = -y / scale + event.clientY / scale;
+
+          return { translateX, translateY };
+        };
+
+        const handleDragElement = (event: MouseEvent) => {
+          if (!store.query.node(id).isDragged()) return;
+
+          // Check if the element is overlapping with a canvas element
+          const nodes = store.query.getNodes();
+
+          const overlappedElements = Object.keys(nodes).find((nodeId) => {
+            if (nodeId === id) return false;
+
+            const node = nodes[nodeId];
+            const el = node.dom;
+            const { x, y, width, height } = el.getBoundingClientRect();
+
+            return (
+              event.clientX > x &&
+              event.clientX < x + width &&
+              event.clientY > y &&
+              event.clientY < y + height
+            );
+          });
+
+          // Check if element is dragged outside of parent
+          const parent = store.query.node(id).ancestors(false)[0];
+          const parentElement = store.query.node(parent).get().dom;
+          const elementBoundingBox = el.getBoundingClientRect();
+          const parentBoundingBox = parentElement.getBoundingClientRect();
+
+          // const isRightOfParent =
+
+          if (parent !== ROOT_NODE) {
+            if (
+              elementBoundingBox.x >
+                parentBoundingBox.left + parentBoundingBox.width ||
+              elementBoundingBox.y >
+                parentBoundingBox.top + parentBoundingBox.height ||
+              elementBoundingBox.x + elementBoundingBox.width <
+                parentBoundingBox.x ||
+              elementBoundingBox.y + elementBoundingBox.height <
+                parentBoundingBox.y
+            ) {
+              // Move element up a level
+              const parentParent = store.query.node(parent).ancestors(false)[0];
+              store.actions.move(id, parentParent, 0);
+            }
+          }
+
+          // const isDraggedOffParent =
+
+          if (overlappedElements && parent !== overlappedElements) {
+            // Check if canvas
+            const isCanvas = store.query.node(overlappedElements).isCanvas();
+
+            if (isCanvas) {
+              store.actions.move(id, overlappedElements, 0);
+              // Set to position absolute
+              el.style.position = 'absolute';
+            }
+          }
+
+          // Check if dragging out of overflow
+
+          const { translateX, translateY } = calculateTransform(event);
+
+          const transform = `translateX(${translateX}px) translateY(${translateY}px)`;
+          el.style.transform = transform;
+        };
+
+        window.addEventListener('mousemove', handleDragElement);
 
         const unbindDragStart = this.addCraftEventListener(
           el,
-          'dragstart',
-          (e) => {
-            e.craft.stopPropagation();
+          'mousedown',
+          (event) => {
+            // Testing
+            event.craft.stopPropagation();
 
-            const { query, actions } = store;
+            const parent = store.query.node(id).ancestors(false)[0];
 
-            let selectedElementIds = query.getEvent('selected').all();
+            if (parent === ROOT_NODE && el.style.position !== 'fixed') {
+              const { translateX, translateY } = calculateTransform(event);
+              const transform = `translateX(${translateX}px) translateY(${translateY}px)`;
 
-            const isMultiSelect = this.options.isMultiSelectEnabled(e);
-            const isNodeAlreadySelected = this.currentSelectedElementIds.includes(
-              id
-            );
-
-            if (!isNodeAlreadySelected) {
-              if (isMultiSelect) {
-                selectedElementIds = [...selectedElementIds, id];
-              } else {
-                selectedElementIds = [id];
-              }
-              store.actions.setNodeEvent('selected', selectedElementIds);
+              el.style.transform = transform;
+              el.style.position = 'fixed';
+              el.style.top = '0px';
+              el.style.left = '0px';
             }
 
-            actions.setNodeEvent('dragged', selectedElementIds);
-
-            const selectedDOMs = selectedElementIds.map(
-              (id) => query.node(id).get().dom
-            );
-
-            this.draggedElementShadow = createShadow(
-              e,
-              selectedDOMs,
-              DefaultEventHandlers.forceSingleDragShadow
-            );
-
-            this.dragTarget = {
-              type: 'existing',
-              nodes: selectedElementIds,
-            };
-
-            this.positioner = new Positioner(
-              this.options.store,
-              this.dragTarget
-            );
+            store.actions.setNodeEvent('dragged', id);
           }
         );
 
-        const unbindDragEnd = this.addCraftEventListener(el, 'dragend', (e) => {
-          e.craft.stopPropagation();
+        const handleDragEnd = () => {
+          store.actions.setNodeEvent('dragged', null);
+        };
 
-          this.dropElement((dragTarget, indicator) => {
-            if (dragTarget.type === 'new') {
-              return;
-            }
+        window.addEventListener('mouseup', handleDragEnd);
 
-            const index =
-              indicator.placement.index +
-              (indicator.placement.where === 'after' ? 1 : 0);
+        // TODO: When dragged over elements that are droppable, enable the default craft js drop behaviour
+        // const unbindDragOver = this.addCraftEventListener(
+        //   el,
+        //   'dragover',
+        //   (e) => {
+        //     console.log('drag over');
+        //     e.craft.stopPropagation();
 
-            store.actions.move(
-              dragTarget.nodes,
-              indicator.placement.parent.id,
-              index
-            );
-          });
-        });
+        //     const { query, actions } = store;
+
+        //     let selectedElementIds = query.getEvent('selected').all();
+
+        //     const isMultiSelect = this.options.isMultiSelectEnabled(e);
+        //     const isNodeAlreadySelected = this.currentSelectedElementIds.includes(
+        //       id
+        //     );
+
+        //     if (!isNodeAlreadySelected) {
+        //       if (isMultiSelect) {
+        //         selectedElementIds = [...selectedElementIds, id];
+        //       } else {
+        //         selectedElementIds = [id];
+        //       }
+        //       store.actions.setNodeEvent('selected', selectedElementIds);
+        //     }
+
+        //     actions.setNodeEvent('dragged', selectedElementIds);
+
+        //     const selectedDOMs = selectedElementIds.map(
+        //       (id) => query.node(id).get().dom
+        //     );
+
+        //     this.draggedElementShadow = createShadow(
+        //       e,
+        //       selectedDOMs,
+        //       DefaultEventHandlers.forceSingleDragShadow
+        //     );
+
+        //     this.dragTarget = {
+        //       type: 'existing',
+        //       nodes: selectedElementIds,
+        //     };
+
+        //     this.positioner = new Positioner(
+        //       this.options.store,
+        //       this.dragTarget
+        //     );
+        //   }
+        // );
 
         return () => {
           el.setAttribute('draggable', 'false');
+
           unbindDragStart();
-          unbindDragEnd();
+          window.removeEventListener('mousemove', handleDragElement);
+          window.removeEventListener('mouseup', handleDragEnd);
         };
       },
       create: (
@@ -303,11 +379,11 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
         const unbindDragEnd = this.addCraftEventListener(el, 'dragend', (e) => {
           e.craft.stopPropagation();
+
           this.dropElement((dragTarget, indicator) => {
             if (dragTarget.type === 'existing') {
               return;
             }
-
             const index =
               indicator.placement.index +
               (indicator.placement.where === 'after' ? 1 : 0);
@@ -316,7 +392,6 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
               indicator.placement.parent.id,
               index
             );
-
             if (options && isFunction(options.onCreate)) {
               options.onCreate(dragTarget.tree);
             }
@@ -336,30 +411,22 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
     onDropNode: (dragTarget: DragTarget, placement: Indicator) => void
   ) {
     const store = this.options.store;
-
     if (!this.positioner) {
       return;
     }
-
     const draggedElementShadow = this.draggedElementShadow;
-
     const indicator = this.positioner.getIndicator();
-
     if (this.dragTarget && indicator && !indicator.error) {
       onDropNode(this.dragTarget, indicator);
     }
-
     if (draggedElementShadow) {
       draggedElementShadow.parentNode.removeChild(draggedElementShadow);
       this.draggedElementShadow = null;
     }
-
     this.dragTarget = null;
-
     store.actions.setIndicator(null);
     store.actions.setNodeEvent('dragged', null);
     this.positioner.cleanup();
-
     this.positioner = null;
   }
 }
