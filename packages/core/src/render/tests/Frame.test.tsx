@@ -30,7 +30,11 @@ describe('<Frame />', () => {
       },
     };
     query = { createNode: jest.fn(), parseTreeFromReactNode: jest.fn() };
-    mockEditor.mockImplementation(() => ({ actions, query }));
+    mockEditor.mockImplementation(() => ({
+      actions,
+      query,
+      viewport: { transformX: 0, transformY: 0, scale: 0.2 },
+    }));
   });
 
   describe('When rendering using `data`', () => {

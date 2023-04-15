@@ -26,6 +26,7 @@ import {
   SerializedNodes,
   NodeSelector,
   NodeSelectorType,
+  Viewport,
 } from '../interfaces';
 import { fromEntries } from '../utils/fromEntries';
 import { getNodesFromSelector } from '../utils/getNodesFromSelector';
@@ -171,6 +172,14 @@ const Methods = (
       }
 
       addNodeTreeToParent(tree, parentId, { type: 'linked', id });
+    },
+
+    /**
+     * Sets viewport dimensions and scale for panning and zooming
+     * @param viewport
+     */
+    setViewport(cb: (state: Viewport) => void) {
+      cb(state.options.viewport);
     },
 
     /**

@@ -20,6 +20,11 @@ export const editorInitialState: EditorState = {
   indicator: null,
   handlers: null,
   options: {
+    viewport: {
+      scale: 0.2,
+      transformX: 0,
+      transformY: 0,
+    },
     onNodesChange: () => null,
     onRender: ({ render }) => render,
     onBeforeMoveEnd: () => null,

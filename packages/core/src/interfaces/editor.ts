@@ -22,6 +22,7 @@ export type Options = {
   onNodesChange: (query: QueryCallbacksFor<typeof QueryMethods>) => void;
   resolver: Resolver;
   enabled: boolean;
+  viewport: Viewport;
   indicator: Partial<{
     success: string;
     error: string;
@@ -48,6 +49,12 @@ export interface Indicator {
 }
 
 export type EditorEvents = Record<NodeEventTypes, Set<NodeId>>;
+
+export type Viewport = {
+  scale: number;
+  transformX: number;
+  transformY: number;
+};
 
 export type EditorState = {
   nodes: Nodes;

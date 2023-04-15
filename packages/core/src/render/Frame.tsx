@@ -11,16 +11,81 @@ export type Frame = {
 };
 
 const RenderRootNode = () => {
-  const { timestamp } = useInternalEditor((state) => ({
+  const {
+    viewport,
+    timestamp,
+    actions: { setViewport },
+  } = useInternalEditor((state) => ({
+    viewport: state.options.viewport,
     timestamp:
       state.nodes[ROOT_NODE] && state.nodes[ROOT_NODE]._hydrationTimestamp,
   }));
+
+  const { scale, transformX, transformY } = viewport;
+
+  useEffect(() => {
+    function handleScroll(event: WheelEvent) {
+      const { deltaX, deltaY } = event;
+
+      const isVerticalScroll = Math.abs(deltaY) > Math.abs(deltaX);
+
+      // Zoom in when scolling and holding ctrl or alt
+      if (event.ctrlKey || event.altKey) {
+        if (isVerticalScroll) {
+          setViewport((previousViewport) => {
+            const newScale = previousViewport.scale - deltaY / 500;
+
+            if (newScale > 10) {
+              previousViewport.scale = 10;
+              return;
+            }
+            if (newScale < 0.1) {
+              previousViewport.scale = 0.1;
+              return;
+            }
+
+            previousViewport.scale = newScale;
+          });
+        }
+        // Pans viewport when not holding ctrl or alt
+      } else {
+        setViewport(
+          (previousViewport) =>
+            (previousViewport.transformX = previousViewport.transformX - deltaX)
+        );
+        setViewport(
+          (previousViewport) =>
+            (previousViewport.transformY = previousViewport.transformY - deltaY)
+        );
+      }
+    }
+
+    document.addEventListener('wheel', handleScroll);
+
+    return () => {
+      document.removeEventListener('wheel', handleScroll);
+    };
+  }, [setViewport]);
 
   if (!timestamp) {
     return null;
   }
 
-  return <NodeElement id={ROOT_NODE} key={timestamp} />;
+  const transform = `translateX(${transformX}px) translateY(${transformY}px) scale(${scale})`;
+
+  const CanvasStyle: React.CSSProperties = {
+    transform,
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    isolation: 'isolate',
+  };
+
+  return (
+    <div id="global-frame" style={CanvasStyle}>
+      <NodeElement id={ROOT_NODE} key={timestamp} />
+    </div>
+  );
 };
 
 /**
