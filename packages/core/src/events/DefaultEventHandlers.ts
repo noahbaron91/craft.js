@@ -181,64 +181,97 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
         const handleDragElement = (event: MouseEvent) => {
           if (!store.query.node(id).isDragged()) return;
+          const parent = store.query.node(id).ancestors(false)[0];
 
           // Check if the element is overlapping with a canvas element
-          const nodes = store.query.getNodes();
+          const moveElementIntoOverlappedCanvas = () => {
+            const nodes = store.query.getNodes();
 
-          const overlappedElements = Object.keys(nodes).find((nodeId) => {
-            if (nodeId === id) return false;
+            const overlappedElements = Object.keys(nodes).filter((nodeId) => {
+              if (nodeId === id) return false;
 
-            const node = nodes[nodeId];
-            const el = node.dom;
-            const { x, y, width, height } = el.getBoundingClientRect();
+              if (!store.query.node(nodeId).isCanvas()) return false;
 
-            return (
-              event.clientX > x &&
-              event.clientX < x + width &&
-              event.clientY > y &&
-              event.clientY < y + height
+              const node = nodes[nodeId];
+              const el = node.dom;
+              const { x, y, width, height } = el.getBoundingClientRect();
+
+              return (
+                event.clientX > x &&
+                event.clientX < x + width &&
+                event.clientY > y &&
+                event.clientY < y + height
+              );
+            });
+
+            // Filter overlapped elements to get the top level element
+            const topLevelOverlappedElement = overlappedElements.find(
+              (elementId) => {
+                if (!elementId) return false;
+
+                const canMoveIn =
+                  overlappedElements &&
+                  topLevelOverlappedElement &&
+                  parent !== topLevelOverlappedElement;
+
+                if (canMoveIn) {
+                  store.actions.move(id, topLevelOverlappedElement, 0);
+                }
+
+                const parents = store.query.node(elementId).descendants(true);
+                return parents.every((id) => !overlappedElements.includes(id));
+              }
             );
-          });
 
-          // Check if element is dragged outside of parent
-          const parent = store.query.node(id).ancestors(false)[0];
-          const parentElement = store.query.node(parent).get().dom;
-          const elementBoundingBox = el.getBoundingClientRect();
-          const parentBoundingBox = parentElement.getBoundingClientRect();
+            const canMoveIn =
+              topLevelOverlappedElement && parent !== topLevelOverlappedElement;
 
-          // const isRightOfParent =
+            if (canMoveIn) {
+              store.actions.move(id, topLevelOverlappedElement, 0);
+            }
+          };
 
-          if (parent !== ROOT_NODE) {
-            if (
+          const checkIfElementIsDraggedOutsideOfParent = () => {
+            const parentElement = store.query.node(parent).get().dom;
+
+            const elementBoundingBox = el.getBoundingClientRect();
+            const parentBoundingBox = parentElement.getBoundingClientRect();
+
+            const isRightOfParent =
               elementBoundingBox.x >
-                parentBoundingBox.left + parentBoundingBox.width ||
-              elementBoundingBox.y >
-                parentBoundingBox.top + parentBoundingBox.height ||
+              parentBoundingBox.left + parentBoundingBox.width;
+
+            const isLeftOfParent =
               elementBoundingBox.x + elementBoundingBox.width <
-                parentBoundingBox.x ||
+              parentBoundingBox.x;
+
+            const isAboveParent =
               elementBoundingBox.y + elementBoundingBox.height <
-                parentBoundingBox.y
-            ) {
-              // Move element up a level
-              const parentParent = store.query.node(parent).ancestors(false)[0];
-              store.actions.move(id, parentParent, 0);
+              parentBoundingBox.y;
+
+            const isBelowParent =
+              elementBoundingBox.y >
+              parentBoundingBox.top + parentBoundingBox.height;
+
+            if (parent !== ROOT_NODE) {
+              if (
+                isRightOfParent ||
+                isBelowParent ||
+                isLeftOfParent ||
+                isAboveParent
+              ) {
+                // Move element up a level
+                const parentParent = store.query
+                  .node(parent)
+                  .ancestors(false)[0];
+
+                store.actions.move(id, parentParent, 0);
+              }
             }
-          }
+          };
 
-          // const isDraggedOffParent =
-
-          if (overlappedElements && parent !== overlappedElements) {
-            // Check if canvas
-            const isCanvas = store.query.node(overlappedElements).isCanvas();
-
-            if (isCanvas) {
-              store.actions.move(id, overlappedElements, 0);
-              // Set to position absolute
-              el.style.position = 'absolute';
-            }
-          }
-
-          // Check if dragging out of overflow
+          moveElementIntoOverlappedCanvas();
+          checkIfElementIsDraggedOutsideOfParent();
 
           const { translateX, translateY } = calculateTransform(event);
 
