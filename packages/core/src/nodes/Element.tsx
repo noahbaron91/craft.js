@@ -14,6 +14,7 @@ import { NodeId } from '../interfaces';
 export const defaultElementProps = {
   is: 'div',
   canvas: false,
+  indicator: false,
   custom: {},
   hidden: false,
 };
@@ -21,6 +22,7 @@ export const defaultElementProps = {
 export const elementPropToNodeData = {
   is: 'type',
   canvas: 'isCanvas',
+  indicator: 'isIndicator',
 };
 
 export type Element<T extends React.ElementType> = {
@@ -29,6 +31,7 @@ export type Element<T extends React.ElementType> = {
   custom?: Record<string, any>;
   children?: React.ReactNode;
   canvas?: boolean;
+  indicator?: boolean;
 } & React.ComponentProps<T>;
 
 export function Element<T extends React.ElementType>({

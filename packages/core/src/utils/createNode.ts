@@ -32,6 +32,7 @@ export function createNode(
       custom: {},
       parent: null,
       isCanvas: false,
+      isIndicator: false,
       hidden: false,
       nodes: [],
       linkedNodes: {},

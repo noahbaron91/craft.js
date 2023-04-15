@@ -29,6 +29,9 @@ export function NodeHelpers(state: EditorState, id: NodeId) {
     isCanvas() {
       return !!node.data.isCanvas;
     },
+    isIndicator() {
+      return !!node.data.isIndicator;
+    },
     isRoot() {
       return node.id === ROOT_NODE;
     },

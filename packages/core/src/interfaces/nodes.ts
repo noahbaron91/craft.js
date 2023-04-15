@@ -10,6 +10,7 @@ export type UserComponentConfig<T> = {
   props: Partial<T>;
   custom: Record<string, any>;
   isCanvas: boolean;
+  indicator: boolean;
 
   // TODO: Deprecate
   name: string;
@@ -48,6 +49,7 @@ export type NodeData = {
   name: string;
   displayName: string;
   isCanvas: boolean;
+  isIndicator: boolean;
   parent: NodeId;
   linkedNodes: Record<string, NodeId>;
   nodes: NodeId[];
@@ -70,6 +72,7 @@ export type ReduceCompType =
 export type ReducedComp = {
   type: ReduceCompType;
   isCanvas: boolean;
+  isIndicator: boolean;
   props: any;
 };
 
