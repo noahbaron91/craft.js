@@ -179,9 +179,61 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           return { translateX, translateY };
         };
 
+        const createIndicator = (containerId: string, event: MouseEvent) => {
+          // Create indicator
+          this.dragTarget = {
+            type: 'existing',
+            nodes: [id],
+          };
+
+          this.positioner = new Positioner(this.options.store, this.dragTarget);
+
+          if (!this.positioner) {
+            return;
+          }
+
+          const indicator = this.positioner.computeIndicator(
+            containerId,
+            event.clientX,
+            event.clientY
+          );
+
+          if (!indicator) {
+            return;
+          }
+
+          store.actions.setIndicator(indicator);
+        };
+
+        const checkIfElementIsMissingStyles = () => {
+          const parent = store.query.node(id).ancestors(false)[0];
+
+          const styles = getComputedStyle(el);
+          const position = styles.getPropertyValue('position');
+          const zIndex = styles.getPropertyValue('z-index');
+
+          if (parent === ROOT_NODE && position !== 'fixed') {
+            el.style.position = 'fixed';
+          }
+
+          if (parent !== ROOT_NODE && position !== 'absolute') {
+            el.style.position = 'absolute';
+          }
+
+          if (zIndex !== '99999') {
+            el.style.zIndex = '99999';
+          }
+        };
+
         const handleDragElement = (event: MouseEvent) => {
           if (!store.query.node(id).isDragged()) return;
           const parent = store.query.node(id).ancestors(false)[0];
+
+          // If the element is an indicator canvas element make sure an indicator exists
+          if (store.query.node(parent).isIndicator()) {
+            const parentParent = store.query.node(parent).ancestors(false)[0];
+            store.actions.move(id, parentParent, 0);
+          }
 
           // Check if the element is overlapping with a canvas element
           const moveElementIntoOverlappedCanvas = () => {
@@ -207,7 +259,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             // Filter overlapped elements to get the top level element
             const topLevelOverlappedElement = overlappedElements.find(
               (elementId) => {
-                if (!elementId) return false;
+                if (!elementId || elementId === id) return false;
 
                 const canMoveIn =
                   overlappedElements &&
@@ -227,7 +279,15 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
               topLevelOverlappedElement && parent !== topLevelOverlappedElement;
 
             if (canMoveIn) {
-              store.actions.move(id, topLevelOverlappedElement, 0);
+              const isIndicator = store.query
+                .node(topLevelOverlappedElement)
+                .isIndicator();
+
+              if (isIndicator) {
+                createIndicator(topLevelOverlappedElement, event);
+              } else {
+                store.actions.move(id, topLevelOverlappedElement, 0);
+              }
             }
           };
 
@@ -270,12 +330,52 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             }
           };
 
+          const checkIfIndicatorIsValid = () => {
+            if (!store.query.node(id).isDragged()) return;
+
+            if (!this.positioner) return;
+            const indicator = this.positioner.getIndicator();
+            const elementBoundingBox = el.getBoundingClientRect();
+            const parentBoundingBox = indicator.placement.parent.dom.getBoundingClientRect();
+
+            const isRightOfParent =
+              elementBoundingBox.x >
+              parentBoundingBox.left + parentBoundingBox.width;
+
+            const isLeftOfParent =
+              elementBoundingBox.x + elementBoundingBox.width <
+              parentBoundingBox.x;
+
+            const isAboveParent =
+              elementBoundingBox.y + elementBoundingBox.height <
+              parentBoundingBox.y;
+
+            const isBelowParent =
+              elementBoundingBox.y >
+              parentBoundingBox.top + parentBoundingBox.height;
+
+            if (
+              isRightOfParent ||
+              isBelowParent ||
+              isLeftOfParent ||
+              isAboveParent
+            ) {
+              store.actions.setIndicator(null);
+              this.positioner.cleanup();
+              this.positioner = null;
+              this.dragTarget = null;
+            }
+          };
+
+          // checkIfElementIsMissingStyles();
           moveElementIntoOverlappedCanvas();
           checkIfElementIsDraggedOutsideOfParent();
+          checkIfIndicatorIsValid();
 
           const { translateX, translateY } = calculateTransform(event);
 
           const transform = `translateX(${translateX}px) translateY(${translateY}px)`;
+          checkIfElementIsMissingStyles();
           el.style.transform = transform;
         };
 
@@ -285,80 +385,35 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           el,
           'mousedown',
           (event) => {
-            // Testing
             event.craft.stopPropagation();
-
-            const parent = store.query.node(id).ancestors(false)[0];
-
-            if (parent === ROOT_NODE && el.style.position !== 'fixed') {
-              const { translateX, translateY } = calculateTransform(event);
-              const transform = `translateX(${translateX}px) translateY(${translateY}px)`;
-
-              el.style.transform = transform;
-              el.style.position = 'fixed';
-              el.style.top = '0px';
-              el.style.left = '0px';
-            }
-
+            checkIfElementIsMissingStyles();
             store.actions.setNodeEvent('dragged', id);
           }
         );
 
         const handleDragEnd = () => {
+          if (!store.query.node(id).isDragged()) return;
+
           store.actions.setNodeEvent('dragged', null);
+          el.style.zIndex = '1';
+
+          if (!this.positioner) return;
+
+          // Drop element
+          const indicator = this.positioner.getIndicator();
+          const index =
+            indicator.placement.index +
+            (indicator.placement.where === 'after' ? 1 : 0);
+          store.actions.move(id, indicator.placement.parent.id, index);
+
+          // Cleanup indicator
+          store.actions.setIndicator(null);
+          this.dragTarget = null;
+          this.positioner.cleanup();
+          this.positioner = null;
         };
 
         window.addEventListener('mouseup', handleDragEnd);
-
-        // TODO: When dragged over elements that are droppable, enable the default craft js drop behaviour
-        // const unbindDragOver = this.addCraftEventListener(
-        //   el,
-        //   'dragover',
-        //   (e) => {
-        //     console.log('drag over');
-        //     e.craft.stopPropagation();
-
-        //     const { query, actions } = store;
-
-        //     let selectedElementIds = query.getEvent('selected').all();
-
-        //     const isMultiSelect = this.options.isMultiSelectEnabled(e);
-        //     const isNodeAlreadySelected = this.currentSelectedElementIds.includes(
-        //       id
-        //     );
-
-        //     if (!isNodeAlreadySelected) {
-        //       if (isMultiSelect) {
-        //         selectedElementIds = [...selectedElementIds, id];
-        //       } else {
-        //         selectedElementIds = [id];
-        //       }
-        //       store.actions.setNodeEvent('selected', selectedElementIds);
-        //     }
-
-        //     actions.setNodeEvent('dragged', selectedElementIds);
-
-        //     const selectedDOMs = selectedElementIds.map(
-        //       (id) => query.node(id).get().dom
-        //     );
-
-        //     this.draggedElementShadow = createShadow(
-        //       e,
-        //       selectedDOMs,
-        //       DefaultEventHandlers.forceSingleDragShadow
-        //     );
-
-        //     this.dragTarget = {
-        //       type: 'existing',
-        //       nodes: selectedElementIds,
-        //     };
-
-        //     this.positioner = new Positioner(
-        //       this.options.store,
-        //       this.dragTarget
-        //     );
-        //   }
-        // );
 
         return () => {
           el.setAttribute('draggable', 'false');
