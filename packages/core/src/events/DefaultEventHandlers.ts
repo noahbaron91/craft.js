@@ -1,12 +1,9 @@
 import { ROOT_NODE, isChromium, isLinux } from '@noahbaron91/utils';
-import { isFunction } from 'lodash';
-import React from 'react';
 
 import { CoreEventHandlers, CreateHandlerOptions } from './CoreEventHandlers';
 import { Positioner } from './Positioner';
-import { createShadow } from './createShadow';
 
-import { Indicator, NodeId, DragTarget, NodeTree } from '../interfaces';
+import { Indicator, NodeId, DragTarget } from '../interfaces';
 
 export type DefaultEventHandlersOptions = {
   isMultiSelectEnabled: (e: MouseEvent) => boolean;
@@ -413,6 +410,11 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           this.positioner = null;
         };
 
+        // Changes the dragging indicator to drop
+        document.addEventListener('dragover', (event) => {
+          event.preventDefault();
+        });
+
         window.addEventListener('mouseup', handleDragEnd);
 
         return () => {
@@ -425,7 +427,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
       },
       create: (
         el: HTMLElement,
-        userElement: React.ReactElement | (() => NodeTree | React.ReactElement),
+        userElement: React.ReactElement,
         options?: Partial<CreateHandlerOptions>
       ) => {
         el.setAttribute('draggable', 'true');
@@ -436,54 +438,69 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           (e) => {
             e.craft.stopPropagation();
             let tree;
-            if (typeof userElement === 'function') {
-              const result = userElement();
-              if (React.isValidElement(result)) {
-                tree = store.query.parseReactElement(result).toNodeTree();
-              } else {
-                tree = result;
-              }
-            } else {
-              tree = store.query.parseReactElement(userElement).toNodeTree();
-            }
 
-            const dom = e.currentTarget as HTMLElement;
-            this.draggedElementShadow = createShadow(
-              e,
-              [dom],
-              DefaultEventHandlers.forceSingleDragShadow
-            );
+            // TODO: Reimplement this
+            // if (typeof userElement === 'function') {
+            //   const result = userElement();
+            //   if (React.isValidElement(result)) {
+            //     tree = store.query.parseReactElement(result).toNodeTree();
+            //   } else {
+            //     tree = result;
+            //   }
+            // } else {
+            //   tree = store.query.parseReactElement(userElement).toNodeTree();
+            // }
+
+            // Create ghost element from tree
+            tree = store.query.parseReactElement(userElement).toNodeTree();
+            store.actions.setDragElement(userElement, e);
+
             this.dragTarget = {
               type: 'new',
               tree,
             };
-
-            this.positioner = new Positioner(
-              this.options.store,
-              this.dragTarget
-            );
           }
         );
 
+        // const unbindDragOver = this.addCraftEventListener(
+        //   el,
+        //   'dragover',
+        //   (event) => {
+        //     event.preventDefault();
+        //     // Render element at cursor position with low opacity
+        //   }
+        // );
+
         const unbindDragEnd = this.addCraftEventListener(el, 'dragend', (e) => {
           e.craft.stopPropagation();
+
+          store.actions.setDragElement(null, null);
+
+          const dragTarget = this.dragTarget;
+
+          if (dragTarget.type === 'new') {
+            store.actions.addNodeTree(dragTarget.tree, ROOT_NODE, 0);
+          }
 
           this.dropElement((dragTarget, indicator) => {
             if (dragTarget.type === 'existing') {
               return;
             }
-            const index =
-              indicator.placement.index +
-              (indicator.placement.where === 'after' ? 1 : 0);
-            store.actions.addNodeTree(
-              dragTarget.tree,
-              indicator.placement.parent.id,
-              index
-            );
-            if (options && isFunction(options.onCreate)) {
-              options.onCreate(dragTarget.tree);
-            }
+
+            // const index =
+            //   indicator.placement.index +
+            //   (indicator.placement.where === 'after' ? 1 : 0);
+            // store.actions.addNodeTree(
+            //   dragTarget.tree,
+            //   indicator.placement.parent.id,
+            //   index
+            // );
+            // if (options && isFunction(options.onCreate)) {
+            //   options.onCreate(dragTarget.tree);
+            // }
           });
+
+          // Cleanup indicator
         });
 
         return () => {

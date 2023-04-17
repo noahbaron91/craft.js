@@ -173,7 +173,16 @@ const Methods = (
 
       addNodeTreeToParent(tree, parentId, { type: 'linked', id });
     },
-
+    /**
+     * Creates ghost element for dragging new nodes
+     */
+    setDragElement(
+      element: React.ReactElement | null,
+      event: DragEvent | null
+    ) {
+      state.draggedElement.element = element;
+      state.draggedElement.event = event;
+    },
     /**
      * Sets viewport dimensions and scale for panning and zooming
      * @param viewport

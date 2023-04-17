@@ -56,12 +56,18 @@ export type Viewport = {
   transformY: number;
 };
 
+export type DraggedElement = {
+  element: React.ReactElement;
+  event: DragEvent;
+};
+
 export type EditorState = {
   nodes: Nodes;
   events: EditorEvents;
   options: Options;
   handlers: CoreEventHandlers;
   indicator: Indicator;
+  draggedElement: DraggedElement;
 };
 
 export type ConnectedEditor<S = null> = useInternalEditorReturnType<S>;

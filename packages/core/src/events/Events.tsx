@@ -1,6 +1,7 @@
 import React, { useContext, useMemo } from 'react';
 
 import { EventHandlerContext } from './EventContext';
+import { RenderDraggedElement } from './RenderDraggedElement';
 import { RenderEditorIndicator } from './RenderEditorIndicator';
 
 import { EditorContext } from '../editor/EditorContext';
@@ -23,6 +24,7 @@ export const Events: React.FC<EventsProps> = ({ children }) => {
   return (
     <EventHandlerContext.Provider value={handler}>
       <RenderEditorIndicator />
+      <RenderDraggedElement />
       {children}
     </EventHandlerContext.Provider>
   );
