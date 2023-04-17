@@ -1,4 +1,5 @@
 import { ROOT_NODE, isChromium, isLinux } from '@noahbaron91/utils';
+import { isFunction } from 'lodash';
 
 import { CoreEventHandlers, CreateHandlerOptions } from './CoreEventHandlers';
 import { Positioner } from './Positioner';
@@ -155,27 +156,6 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           return () => {};
         }
 
-        // Calculates the transform of the dragged element
-        const calculateTransform = (event: MouseEvent) => {
-          const parent = store.query.node(id).ancestors(false)[0];
-          let canvasWrapper: HTMLElement;
-
-          if (parent === ROOT_NODE) {
-            canvasWrapper = document.getElementById('global-frame');
-          } else {
-            canvasWrapper = store.query.node(parent).get().dom;
-          }
-
-          const { scale } = store.query.getViewport();
-          const { x, y } = canvasWrapper.getBoundingClientRect();
-
-          // Gets position relative to canvas wrapper
-          const translateX = -x / scale + event.clientX / scale;
-          const translateY = -y / scale + event.clientY / scale;
-
-          return { translateX, translateY };
-        };
-
         const createIndicator = (containerId: string, event: MouseEvent) => {
           // Create indicator
           this.dragTarget = {
@@ -200,26 +180,6 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           }
 
           store.actions.setIndicator(indicator);
-        };
-
-        const checkIfElementIsMissingStyles = () => {
-          const parent = store.query.node(id).ancestors(false)[0];
-
-          const styles = getComputedStyle(el);
-          const position = styles.getPropertyValue('position');
-          const zIndex = styles.getPropertyValue('z-index');
-
-          if (parent === ROOT_NODE && position !== 'fixed') {
-            el.style.position = 'fixed';
-          }
-
-          if (parent !== ROOT_NODE && position !== 'absolute') {
-            el.style.position = 'absolute';
-          }
-
-          if (zIndex !== '99999') {
-            el.style.zIndex = '99999';
-          }
         };
 
         const handleDragElement = (event: MouseEvent) => {
@@ -364,16 +324,35 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             }
           };
 
-          // checkIfElementIsMissingStyles();
+          const updateTransform = () => {
+            const store = this.options.store;
+
+            const parent = store.query.node(id).ancestors(false)[0];
+            let canvasWrapper: HTMLElement;
+
+            if (parent === ROOT_NODE) {
+              canvasWrapper = document.getElementById('global-frame');
+            } else {
+              canvasWrapper = store.query.node(parent).get().dom;
+            }
+
+            const { scale } = store.query.getViewport();
+            const { x, y } = canvasWrapper.getBoundingClientRect();
+
+            // Gets position relative to canvas wrapper
+            const translateX = -x / scale + event.clientX / scale;
+            const translateY = -y / scale + event.clientY / scale;
+
+            store.actions.setPosition(id, {
+              top: translateY,
+              left: translateX,
+            });
+          };
+
           moveElementIntoOverlappedCanvas();
           checkIfElementIsDraggedOutsideOfParent();
           checkIfIndicatorIsValid();
-
-          const { translateX, translateY } = calculateTransform(event);
-
-          const transform = `translateX(${translateX}px) translateY(${translateY}px)`;
-          checkIfElementIsMissingStyles();
-          el.style.transform = transform;
+          updateTransform();
         };
 
         window.addEventListener('mousemove', handleDragElement);
@@ -383,7 +362,6 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           'mousedown',
           (event) => {
             event.craft.stopPropagation();
-            checkIfElementIsMissingStyles();
             store.actions.setNodeEvent('dragged', id);
           }
         );
@@ -458,18 +436,120 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             this.dragTarget = {
               type: 'new',
               tree,
+              containerId: ROOT_NODE,
             };
           }
         );
 
-        // const unbindDragOver = this.addCraftEventListener(
-        //   el,
-        //   'dragover',
-        //   (event) => {
-        //     event.preventDefault();
-        //     // Render element at cursor position with low opacity
-        //   }
-        // );
+        const unbindDrag = this.addCraftEventListener(el, 'drag', (event) => {
+          if (!el.getAttribute('draggable')) return;
+
+          const createIndicator = (containerId: string, event: MouseEvent) => {
+            this.positioner = new Positioner(
+              this.options.store,
+              this.dragTarget
+            );
+
+            if (!this.positioner) {
+              return;
+            }
+
+            const indicator = this.positioner.computeIndicator(
+              containerId,
+              event.clientX,
+              event.clientY
+            );
+
+            if (!indicator) {
+              return;
+            }
+
+            store.actions.setIndicator(indicator);
+          };
+
+          const moveElementIntoOverlappedCanvas = () => {
+            const nodes = store.query.getNodes();
+
+            const overlappedElements = Object.keys(nodes).filter((nodeId) => {
+              if (!nodeId || nodeId === ROOT_NODE) return false;
+              if (!store.query.node(nodeId).isCanvas()) return false;
+
+              const node = nodes[nodeId];
+              const el = node.dom;
+              const { x, y, width, height } = el.getBoundingClientRect();
+
+              return (
+                event.clientX > x &&
+                event.clientX < x + width &&
+                event.clientY > y &&
+                event.clientY < y + height
+              );
+            });
+
+            // Filter overlapped elements to get the top level element
+            const topLevelOverlappedElement = overlappedElements.find(
+              (elementId) => {
+                if (!elementId) return false;
+
+                const parents = store.query.node(elementId).descendants(true);
+                return parents.every((id) => !overlappedElements.includes(id));
+              }
+            );
+
+            if (topLevelOverlappedElement) {
+              const isIndicator = store.query
+                .node(topLevelOverlappedElement)
+                .isIndicator();
+
+              if (isIndicator) {
+                createIndicator(topLevelOverlappedElement, event);
+              } else if (this.dragTarget.type === 'new') {
+                this.dragTarget.containerId = topLevelOverlappedElement;
+              }
+            }
+          };
+
+          const checkIfIndicatorIsValid = () => {
+            if (!this.positioner) return;
+
+            const indicator = this.positioner.getIndicator();
+
+            if (!indicator) return;
+
+            const parentBoundingBox = indicator.placement.parent.dom.getBoundingClientRect();
+
+            if (!parentBoundingBox) return;
+
+            const isRightOfParent =
+              event.x > parentBoundingBox.left + parentBoundingBox.width;
+
+            const isLeftOfParent = event.x < parentBoundingBox.x;
+
+            const isAboveParent = event.y < parentBoundingBox.y;
+
+            const isBelowParent =
+              event.y > parentBoundingBox.top + parentBoundingBox.height;
+
+            if (
+              isRightOfParent ||
+              isBelowParent ||
+              isLeftOfParent ||
+              isAboveParent
+            ) {
+              store.actions.setIndicator(null);
+              this.positioner.cleanup();
+              this.positioner = null;
+
+              if (this.dragTarget.type === 'existing') {
+                this.dragTarget = null;
+              }
+            }
+          };
+
+          event.craft.stopPropagation();
+          checkIfIndicatorIsValid();
+          moveElementIntoOverlappedCanvas();
+        });
 
         const unbindDragEnd = this.addCraftEventListener(el, 'dragend', (e) => {
           e.craft.stopPropagation();
@@ -478,8 +558,33 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
           const dragTarget = this.dragTarget;
 
-          if (dragTarget.type === 'new') {
-            store.actions.addNodeTree(dragTarget.tree, ROOT_NODE, 0);
+          if (!this.positioner) {
+            if (dragTarget.type === 'new') {
+              let canvasWrapper: HTMLElement;
+
+              if (dragTarget.containerId === ROOT_NODE) {
+                canvasWrapper = document.getElementById('global-frame');
+              } else {
+                canvasWrapper = store.query.node(dragTarget.containerId).get()
+                  .dom;
+              }
+
+              const { x, y } = canvasWrapper.getBoundingClientRect();
+              const { scale } = store.query.getViewport();
+
+              const translateX = -x / scale + e.clientX / scale;
+              const translateY = -y / scale + e.clientY / scale;
+
+              store.actions.addNodeTree(
+                dragTarget.tree,
+                dragTarget.containerId,
+                0,
+                {
+                  left: translateX,
+                  top: translateY,
+                }
+              );
+            }
           }
 
           this.dropElement((dragTarget, indicator) => {
@@ -487,26 +592,27 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
               return;
             }
 
-            // const index =
-            //   indicator.placement.index +
-            //   (indicator.placement.where === 'after' ? 1 : 0);
-            // store.actions.addNodeTree(
-            //   dragTarget.tree,
-            //   indicator.placement.parent.id,
-            //   index
-            // );
-            // if (options && isFunction(options.onCreate)) {
-            //   options.onCreate(dragTarget.tree);
-            // }
-          });
+            const index =
+              indicator.placement.index +
+              (indicator.placement.where === 'after' ? 1 : 0);
 
-          // Cleanup indicator
+            store.actions.addNodeTree(
+              dragTarget.tree,
+              indicator.placement.parent.id,
+              index
+            );
+
+            if (options && isFunction(options.onCreate)) {
+              options.onCreate(dragTarget.tree);
+            }
+          });
         });
 
         return () => {
           el.removeAttribute('draggable');
           unbindDragStart();
           unbindDragEnd();
+          unbindDrag();
         };
       },
     };

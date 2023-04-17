@@ -35,6 +35,7 @@ export function createNode(
       isIndicator: false,
       hidden: false,
       nodes: [],
+      position: { global: { top: 0, left: 0 } },
       linkedNodes: {},
       ...newNode.data,
     },

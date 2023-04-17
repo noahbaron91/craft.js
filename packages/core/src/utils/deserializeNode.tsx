@@ -104,6 +104,7 @@ export const deserializeNode = (
     nodes,
     hidden,
     isIndicator,
+    position,
   } = nodeData;
 
   const linkedNodes = nodeData.linkedNodes || nodeData._childCanvas;
@@ -112,6 +113,7 @@ export const deserializeNode = (
     type,
     name,
     isIndicator,
+    position,
     displayName: displayName || name,
     props,
     custom: custom || {},

@@ -52,6 +52,7 @@ export type NodeData = {
   isIndicator: boolean;
   parent: NodeId;
   linkedNodes: Record<string, NodeId>;
+  position: Record<number | 'global', Position>;
   nodes: NodeId[];
   hidden: boolean;
   custom?: any;
@@ -62,6 +63,8 @@ export type FreshNode = {
   id?: NodeId;
   data: Partial<NodeData> & Required<Pick<NodeData, 'type'>>;
 };
+
+export type Position = { top: number; left: number };
 
 export type ReduceCompType =
   | string

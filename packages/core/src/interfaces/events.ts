@@ -40,6 +40,7 @@ type ExistingDragTarget = {
 type NewDragTarget = {
   type: 'new';
   tree: NodeTree;
+  containerId: NodeId;
 };
 
 export type DragTarget = ExistingDragTarget | NewDragTarget;

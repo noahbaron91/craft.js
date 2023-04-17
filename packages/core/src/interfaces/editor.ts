@@ -13,7 +13,10 @@ import { useInternalEditorReturnType } from '../editor/useInternalEditor';
 import { CoreEventHandlers } from '../events';
 
 export type Options = {
-  onRender: React.ComponentType<{ render: React.ReactElement }>;
+  onRender: React.ComponentType<{
+    style?: React.CSSProperties;
+    render: React.ReactElement<any, string | React.JSXElementConstructor<any>>;
+  }>;
   onBeforeMoveEnd: (
     targetNode: Node,
     newParentNode: Node,

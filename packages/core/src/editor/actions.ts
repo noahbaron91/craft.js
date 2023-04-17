@@ -27,6 +27,7 @@ import {
   NodeSelector,
   NodeSelectorType,
   Viewport,
+  Position,
 } from '../interfaces';
 import { fromEntries } from '../utils/fromEntries';
 import { getNodesFromSelector } from '../utils/getNodesFromSelector';
@@ -44,6 +45,7 @@ const Methods = (
       | {
           type: 'child';
           index: number;
+          position: Position;
         }
       | {
           type: 'linked';
@@ -103,6 +105,13 @@ const Methods = (
         parent.data.nodes.splice(index, 0, tree.rootNodeId);
       } else {
         parent.data.nodes.push(tree.rootNodeId);
+      }
+
+      // Add initial position
+      if (addNodeType.position) {
+        state.nodes[tree.rootNodeId].data.position = {
+          global: addNodeType.position,
+        };
       }
 
       return;
@@ -216,7 +225,8 @@ const Methods = (
             rootNodeId: node.id,
           },
           parentId,
-          { type: 'child', index }
+          // TODO: Add position to add method
+          { type: 'child', index, position: null }
         );
       });
     },
@@ -228,8 +238,13 @@ const Methods = (
      * @param parentId
      * @param index
      */
-    addNodeTree(tree: NodeTree, parentId?: NodeId, index?: number) {
-      addNodeTreeToParent(tree, parentId, { type: 'child', index });
+    addNodeTree(
+      tree: NodeTree,
+      parentId?: NodeId,
+      index?: number,
+      position?: Position
+    ) {
+      addNodeTreeToParent(tree, parentId, { type: 'child', index, position });
     },
 
     /**
@@ -453,6 +468,17 @@ const Methods = (
       }
 
       this.setNodeEvent('hovered', null);
+    },
+
+    /**
+     * Update the absolute / fixed position of the node
+     * @param top
+     * @param left
+     */
+    setPosition(id: string, { top, left }: Position) {
+      // TODO: Add other breakpoints instead of just global
+      state.nodes[id].data.position.global.top = top;
+      state.nodes[id].data.position.global.left = left;
     },
   };
 };
