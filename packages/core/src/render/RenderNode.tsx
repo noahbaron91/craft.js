@@ -1,5 +1,5 @@
 import { ROOT_NODE } from '@noahbaron91/utils';
-import React, { useCallback } from 'react';
+import React from 'react';
 
 import { DefaultRender } from './DefaultRender';
 
@@ -36,7 +36,7 @@ export const RenderNodeToElement: any = ({ render }) => {
     onRender: state.options.onRender,
   }));
 
-  const updatePositions = useCallback(() => {
+  const updatePositions = () => {
     if (dom && position && parent) {
       const parent = store.query.node(id).ancestors(false)[0];
       const { top, left } = position;
@@ -74,7 +74,7 @@ export const RenderNodeToElement: any = ({ render }) => {
         dom.style.transform = transform;
       }
     }
-  }, [dom, position, parent, store.query, id, isDragging, parentIsIndicator]);
+  };
 
   // don't display the node since it's hidden
   if (hidden) {
