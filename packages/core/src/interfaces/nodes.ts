@@ -10,6 +10,7 @@ export type UserComponentConfig<T> = {
   props: Partial<T>;
   custom: Record<string, any>;
   isCanvas: boolean;
+  indicator: boolean;
 
   // TODO: Deprecate
   name: string;
@@ -48,8 +49,10 @@ export type NodeData = {
   name: string;
   displayName: string;
   isCanvas: boolean;
+  isIndicator: boolean;
   parent: NodeId;
   linkedNodes: Record<string, NodeId>;
+  position: Record<number | 'global', Position>;
   nodes: NodeId[];
   hidden: boolean;
   custom?: any;
@@ -61,6 +64,8 @@ export type FreshNode = {
   data: Partial<NodeData> & Required<Pick<NodeData, 'type'>>;
 };
 
+export type Position = { top: number; left: number };
+
 export type ReduceCompType =
   | string
   | {
@@ -70,6 +75,7 @@ export type ReduceCompType =
 export type ReducedComp = {
   type: ReduceCompType;
   isCanvas: boolean;
+  isIndicator: boolean;
   props: any;
 };
 

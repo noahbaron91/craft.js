@@ -21,3 +21,6 @@ cypress/screenshots/*
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+
+.yalc
+yalc.lock

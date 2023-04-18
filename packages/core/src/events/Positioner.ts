@@ -223,20 +223,6 @@ export class Positioner {
     this.currentDropTargetId = dropTargetId;
     this.currentDropTargetCanvasAncestorId = newParentNode.id;
 
-    // Get parent if we're hovering at the border of the current node
-    if (
-      newParentNode.data.parent &&
-      this.isNearBorders(getDOMInfo(newParentNode.dom), x, y) &&
-      // Ignore if linked node because there's won't be an adjacent sibling anyway
-      !this.store.query.node(newParentNode.id).isLinkedNode()
-    ) {
-      newParentNode = this.store.query.node(newParentNode.data.parent).get();
-    }
-
-    if (!newParentNode) {
-      return;
-    }
-
     this.currentTargetChildDimensions = this.getChildDimensions(newParentNode);
     this.currentTargetId = newParentNode.id;
 

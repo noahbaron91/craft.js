@@ -42,6 +42,10 @@ export function QueryMethods(state: EditorState) {
     QueryMethods(state) as any;
 
   return {
+    // Gets the viewport dimensions and scale
+    getViewport: () => {
+      return state.options.viewport;
+    },
     /**
      * Determine the best possible location to drop the source Node relative to the target Node
      *

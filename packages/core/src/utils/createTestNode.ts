@@ -8,6 +8,13 @@ export const createTestNode = (id, data = {}, config: any = {}) => {
       custom: {},
       hidden: false,
       isCanvas: false,
+      isIndicator: false,
+      position: {
+        global: {
+          left: 0,
+          top: 0,
+        },
+      },
       nodes: [],
       linkedNodes: {},
       ...data,

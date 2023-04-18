@@ -13,7 +13,10 @@ import { useInternalEditorReturnType } from '../editor/useInternalEditor';
 import { CoreEventHandlers } from '../events';
 
 export type Options = {
-  onRender: React.ComponentType<{ render: React.ReactElement }>;
+  onRender: React.ComponentType<{
+    style?: React.CSSProperties;
+    render: React.ReactElement<any, string | React.JSXElementConstructor<any>>;
+  }>;
   onBeforeMoveEnd: (
     targetNode: Node,
     newParentNode: Node,
@@ -22,6 +25,7 @@ export type Options = {
   onNodesChange: (query: QueryCallbacksFor<typeof QueryMethods>) => void;
   resolver: Resolver;
   enabled: boolean;
+  viewport: Viewport;
   indicator: Partial<{
     success: string;
     error: string;
@@ -49,12 +53,24 @@ export interface Indicator {
 
 export type EditorEvents = Record<NodeEventTypes, Set<NodeId>>;
 
+export type Viewport = {
+  scale: number;
+  transformX: number;
+  transformY: number;
+};
+
+export type DraggedElement = {
+  element: React.ReactElement;
+  event: DragEvent;
+};
+
 export type EditorState = {
   nodes: Nodes;
   events: EditorEvents;
   options: Options;
   handlers: CoreEventHandlers;
   indicator: Indicator;
+  draggedElement: DraggedElement;
 };
 
 export type ConnectedEditor<S = null> = useInternalEditorReturnType<S>;

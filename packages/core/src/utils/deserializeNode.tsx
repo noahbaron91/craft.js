@@ -96,13 +96,24 @@ export const deserializeNode = (
     resolver
   ) as unknown) as NodeData;
 
-  const { parent, custom, displayName, isCanvas, nodes, hidden } = nodeData;
+  const {
+    parent,
+    custom,
+    displayName,
+    isCanvas,
+    nodes,
+    hidden,
+    isIndicator,
+    position,
+  } = nodeData;
 
   const linkedNodes = nodeData.linkedNodes || nodeData._childCanvas;
 
   return {
     type,
     name,
+    isIndicator,
+    position,
     displayName: displayName || name,
     props,
     custom: custom || {},
