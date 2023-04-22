@@ -58,6 +58,11 @@ export const Frame: React.FC<React.PropsWithChildren<Frame>> = ({
         if (jsx === rootNode) {
           node.id = ROOT_NODE;
         }
+
+        if (node.data.custom.breakpoint && node.data.custom.breakpoint) {
+          const breakpointName = node.data.custom.breakpoint;
+          actions.updateBreakpointId(node.id, breakpointName);
+        }
         return node;
       });
 

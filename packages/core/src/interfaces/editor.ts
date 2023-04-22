@@ -55,6 +55,7 @@ export type EditorState = {
   options: Options;
   handlers: CoreEventHandlers;
   indicator: Indicator;
+  breakpoints: Record<string, { width: number; nodeId: NodeId }>;
 };
 
 export type ConnectedEditor<S = null> = useInternalEditorReturnType<S>;

@@ -19,6 +19,11 @@ export const editorInitialState: EditorState = {
   },
   indicator: null,
   handlers: null,
+  breakpoints: {
+    ROOT: { width: null, nodeId: 'BREAKPOINT_ROOT' },
+    TABLET: { width: 768, nodeId: null },
+    MOBILE: { width: 480, nodeId: null },
+  },
   options: {
     onNodesChange: () => null,
     onRender: ({ render }) => render,

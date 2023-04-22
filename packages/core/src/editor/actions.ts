@@ -419,6 +419,16 @@ const Methods = (
       targets.forEach(({ node }) => cb(state.nodes[node.id].data.props));
     },
 
+    updateBreakpointId(id: NodeId, breakpointName: string) {
+      state.breakpoints = {
+        ...state.breakpoints,
+        [breakpointName]: {
+          ...state.breakpoints[breakpointName],
+          nodeId: id,
+        },
+      };
+    },
+
     selectNode(nodeIdSelector?: NodeSelector<NodeSelectorType.Id>) {
       if (nodeIdSelector) {
         const targets = getNodesFromSelector(state.nodes, nodeIdSelector, {

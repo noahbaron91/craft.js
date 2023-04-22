@@ -129,6 +129,22 @@ export function NodeHelpers(state: EditorState, id: NodeId) {
       }
       return appendChildNode(id);
     },
+    breakpoint() {
+      const breakpoints = state.breakpoints;
+      const parents = this.ancestors(true);
+
+      let foundBreakpoint = null;
+
+      Object.keys(breakpoints).forEach((breakpointName) => {
+        const breakpoint = breakpoints[breakpointName];
+
+        if (parents.includes(breakpoint.nodeId)) {
+          foundBreakpoint = breakpoint;
+        }
+      });
+
+      return foundBreakpoint;
+    },
     linkedNodes() {
       return Object.values(node.data.linkedNodes || {});
     },
