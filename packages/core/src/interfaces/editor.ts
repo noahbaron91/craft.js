@@ -38,6 +38,7 @@ export type Options = {
     >,
     query: QueryCallbacksFor<typeof QueryMethods>
   ) => void;
+  viewport: Viewport;
 };
 
 export type Resolver = Record<string, string | React.ElementType>;
@@ -46,6 +47,12 @@ export interface Indicator {
   placement: Placement;
   error: string | null;
 }
+
+export type Viewport = {
+  scale: number;
+  transformX: number;
+  transformY: number;
+};
 
 export type EditorEvents = Record<NodeEventTypes, Set<NodeId>>;
 

@@ -26,6 +26,7 @@ import {
   SerializedNodes,
   NodeSelector,
   NodeSelectorType,
+  Viewport,
 } from '../interfaces';
 import { fromEntries } from '../utils/fromEntries';
 import { getNodesFromSelector } from '../utils/getNodesFromSelector';
@@ -445,6 +446,14 @@ const Methods = (
       }
 
       this.setNodeEvent('hovered', null);
+    },
+
+    /**
+     * Sets editor viewport position
+     * @param cb
+     */
+    setViewport(cb: (state: Viewport) => void) {
+      cb(state.options.viewport);
     },
   };
 };
