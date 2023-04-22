@@ -33,6 +33,7 @@ export function createNode(
       parent: null,
       isCanvas: false,
       hidden: false,
+      position: { top: 0, left: 0 },
       nodes: [],
       linkedNodes: {},
       ...newNode.data,

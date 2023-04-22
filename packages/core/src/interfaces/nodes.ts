@@ -50,11 +50,14 @@ export type NodeData = {
   isCanvas: boolean;
   parent: NodeId;
   linkedNodes: Record<string, NodeId>;
+  position: Position;
   nodes: NodeId[];
   hidden: boolean;
   custom?: any;
   _childCanvas?: Record<string, NodeId>; // TODO: Deprecate in favour of linkedNodes
 };
+
+export type Position = { top: number; left: number };
 
 export type FreshNode = {
   id?: NodeId;

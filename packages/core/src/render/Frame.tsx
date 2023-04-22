@@ -21,6 +21,8 @@ const RenderRootNode = () => {
     viewport: state.options.viewport,
   }));
 
+  window.addEventListener('dragover', (event) => event.preventDefault());
+
   useEffect(() => {
     function handleScroll(event: WheelEvent) {
       const { deltaX, deltaY } = event;

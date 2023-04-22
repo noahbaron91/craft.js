@@ -27,6 +27,7 @@ import {
   NodeSelector,
   NodeSelectorType,
   Viewport,
+  Position,
 } from '../interfaces';
 import { fromEntries } from '../utils/fromEntries';
 import { getNodesFromSelector } from '../utils/getNodesFromSelector';
@@ -44,6 +45,7 @@ const Methods = (
       | {
           type: 'child';
           index: number;
+          position?: Position;
         }
       | {
           type: 'linked';
@@ -98,6 +100,10 @@ const Methods = (
 
     if (addNodeType.type === 'child') {
       const index = addNodeType.index;
+
+      if (addNodeType.position) {
+        state.nodes[tree.rootNodeId].data.position = addNodeType.position;
+      }
 
       if (index != null) {
         parent.data.nodes.splice(index, 0, tree.rootNodeId);
@@ -211,8 +217,13 @@ const Methods = (
      * @param parentId
      * @param index
      */
-    addNodeTree(tree: NodeTree, parentId?: NodeId, index?: number) {
-      addNodeTreeToParent(tree, parentId, { type: 'child', index });
+    addNodeTree(
+      tree: NodeTree,
+      parentId?: NodeId,
+      index?: number,
+      position?: Position
+    ) {
+      addNodeTreeToParent(tree, parentId, { type: 'child', index, position });
     },
 
     /**
@@ -454,6 +465,15 @@ const Methods = (
      */
     setViewport(cb: (state: Viewport) => void) {
       cb(state.options.viewport);
+    },
+
+    /**
+     * Updates nodes position
+     * @param id
+     * @param position
+     */
+    setPosition(id: NodeId, position: Position) {
+      state.nodes[id].data.position = position;
     },
   };
 };

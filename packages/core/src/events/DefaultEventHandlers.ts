@@ -6,7 +6,13 @@ import { CoreEventHandlers, CreateHandlerOptions } from './CoreEventHandlers';
 import { Positioner } from './Positioner';
 import { createShadow } from './createShadow';
 
-import { Indicator, NodeId, DragTarget, NodeTree } from '../interfaces';
+import {
+  Indicator,
+  NodeId,
+  DragTarget,
+  NodeTree,
+  Position,
+} from '../interfaces';
 
 export type DefaultEventHandlersOptions = {
   isMultiSelectEnabled: (e: MouseEvent) => boolean;
@@ -183,80 +189,170 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           return () => {};
         }
 
-        el.setAttribute('draggable', 'true');
+        el.setAttribute('draggable', 'false');
+        // el.setAttribute('draggable', 'true');
 
-        const unbindDragStart = this.addCraftEventListener(
-          el,
-          'dragstart',
-          (e) => {
-            e.craft.stopPropagation();
+        // const unbindDragStart = this.addCraftEventListener(
+        //   el,
+        //   'dragstart',
+        //   (e) => {
+        //     e.craft.stopPropagation();
 
-            const { query, actions } = store;
+        //     const { query, actions } = store;
 
-            let selectedElementIds = query.getEvent('selected').all();
+        //     let selectedElementIds = query.getEvent('selected').all();
 
-            const isMultiSelect = this.options.isMultiSelectEnabled(e);
-            const isNodeAlreadySelected = this.currentSelectedElementIds.includes(
-              id
-            );
+        //     const isMultiSelect = this.options.isMultiSelectEnabled(e);
+        //     const isNodeAlreadySelected = this.currentSelectedElementIds.includes(
+        //       id
+        //     );
 
-            if (!isNodeAlreadySelected) {
-              if (isMultiSelect) {
-                selectedElementIds = [...selectedElementIds, id];
-              } else {
-                selectedElementIds = [id];
-              }
-              store.actions.setNodeEvent('selected', selectedElementIds);
-            }
+        //     if (!isNodeAlreadySelected) {
+        //       if (isMultiSelect) {
+        //         selectedElementIds = [...selectedElementIds, id];
+        //       } else {
+        //         selectedElementIds = [id];
+        //       }
+        //       store.actions.setNodeEvent('selected', selectedElementIds);
+        //     }
 
-            actions.setNodeEvent('dragged', selectedElementIds);
+        //     actions.setNodeEvent('dragged', selectedElementIds);
 
-            const selectedDOMs = selectedElementIds.map(
-              (id) => query.node(id).get().dom
-            );
+        //     const selectedDOMs = selectedElementIds.map(
+        //       (id) => query.node(id).get().dom
+        //     );
 
-            this.draggedElementShadow = createShadow(
-              e,
-              selectedDOMs,
-              DefaultEventHandlers.forceSingleDragShadow
-            );
+        //     this.draggedElementShadow = createShadow(
+        //       e,
+        //       selectedDOMs,
+        //       DefaultEventHandlers.forceSingleDragShadow
+        //     );
 
-            this.dragTarget = {
-              type: 'existing',
-              nodes: selectedElementIds,
+        //     this.dragTarget = {
+        //       type: 'existing',
+        //       nodes: selectedElementIds,
+        //     };
+
+        //     this.positioner = new Positioner(
+        //       this.options.store,
+        //       this.dragTarget
+        //     );
+        //   }
+        // );
+
+        // const unbindDragEnd = this.addCraftEventListener(el, 'dragend', (e) => {
+        //   e.craft.stopPropagation();
+
+        //   this.dropElement((dragTarget, indicator) => {
+        //     if (dragTarget.type === 'new') {
+        //       return;
+        //     }
+
+        //     const index =
+        //       indicator.placement.index +
+        //       (indicator.placement.where === 'after' ? 1 : 0);
+
+        //     store.actions.move(
+        //       dragTarget.nodes,
+        //       indicator.placement.parent.id,
+        //       index
+        //     );
+        //   });
+        // });
+        let initialXPosition = null;
+        let initialYPosition = null;
+
+        const calculateTransform = (
+          event: MouseEvent,
+          cb: (translateX: number, translateY) => void
+        ) => {
+          const parent = store.query.node(id).ancestors(false)[0];
+
+          // console.log(breakpoint, parents, breakpoints);
+
+          // let canvasWrapper: HTMLElement;
+
+          // if (
+          //   parents[0] === ROOT_NODE ||
+          //   (parents[0] === ROOT_NODE && !parents?.[1].includes('BREAKPOINT'))
+          // ) {
+          //   canvasWrapper = document.getElementById('global-frame');
+          // } else if (parent[0].includes('BREAKPOINT')) {
+          // canvasWrapper = store.query.node('BREAKPOINT_ROOT').get().dom[
+          //   breakpoint
+          // ];
+          // } else {
+          //   const canvasNodeData = store.query.node(parent).get();
+          //   canvasWrapper = canvasNodeData.dom[breakpoint];
+          // }
+
+          const parentElement = store.query.node(parent).get().dom;
+
+          // if (parents[0] === ROOT_NODE) {
+          //   canvasWrapper = document.getElementById('global-frame');
+          // } else if (parents[0].includes('BREAKPOINT')) {
+          //   canvasWrapper = store.query.node('BREAKPOINT_ROOT').get().dom[
+          //     breakpoint
+          //   ];
+          //   console.log(
+          //     parents[0],
+          //     breakpoint,
+          //     canvasWrapper,
+          //     store.query.getNodes()
+          //   );
+          // } else {
+          //   console.log(parents[0]);
+          //   const canvasNodeData = store.query.node(parents[0]).get();
+          //   canvasWrapper = canvasNodeData.dom[breakpoint];
+          // }
+
+          const { scale } = store.query.getState().options.viewport;
+          const { x, y } = parentElement.getBoundingClientRect();
+          const { left, top } = el.getBoundingClientRect();
+
+          if (!initialXPosition || !initialYPosition) {
+            initialXPosition = event.clientX - left;
+            initialYPosition = event.clientY - top;
+          }
+
+          // Gets position relative to parent
+          const translateX =
+            -x / scale + event.clientX / scale - initialXPosition / scale;
+          const translateY =
+            -y / scale + event.clientY / scale - initialYPosition / scale;
+
+          cb(translateX, translateY);
+        };
+
+        const handleDragElement = (event: MouseEvent) => {
+          calculateTransform(event, (left, top) => {
+            const newPositon = {
+              top,
+              left,
             };
 
-            this.positioner = new Positioner(
-              this.options.store,
-              this.dragTarget
-            );
-          }
-        );
-
-        const unbindDragEnd = this.addCraftEventListener(el, 'dragend', (e) => {
-          e.craft.stopPropagation();
-
-          this.dropElement((dragTarget, indicator) => {
-            if (dragTarget.type === 'new') {
-              return;
-            }
-
-            const index =
-              indicator.placement.index +
-              (indicator.placement.where === 'after' ? 1 : 0);
-
-            store.actions.move(
-              dragTarget.nodes,
-              indicator.placement.parent.id,
-              index
-            );
+            store.actions.setPosition(id, newPositon);
           });
+        };
+
+        el.addEventListener('mousedown', () => {
+          window.addEventListener('mousemove', handleDragElement);
+          window.addEventListener('mouseup', handleDragEnd);
         });
+
+        const handleDragEnd = () => {
+          // Reset drag postition
+          initialXPosition = null;
+          initialYPosition = null;
+
+          window.removeEventListener('mousemove', handleDragElement);
+          window.removeEventListener('mouseup', handleDragEnd);
+        };
 
         return () => {
           el.setAttribute('draggable', 'false');
-          unbindDragStart();
-          unbindDragEnd();
+          // unbindDragStart();
+          // unbindDragEnd();
         };
       },
       create: (
@@ -294,15 +390,151 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
               tree,
             };
 
-            this.positioner = new Positioner(
-              this.options.store,
-              this.dragTarget
-            );
+            // this.positioner = new Positioner(
+            //   this.options.store,
+            //   this.dragTarget
+            // );
           }
         );
 
+        const unbindDrag = this.addCraftEventListener(el, 'drag', (event) => {
+          if (!el.getAttribute('draggable')) return;
+
+          // const createIndicator = (containerId: string, event: MouseEvent) => {
+          //   this.positioner = new Positioner(
+          //     this.options.store,
+          //     this.dragTarget
+          //   );
+
+          //   if (!this.positioner) {
+          //     return;
+          //   }
+
+          //   const indicator = this.positioner.computeIndicator(
+          //     containerId,
+          //     event.clientX,
+          //     event.clientY
+          //   );
+
+          //   if (!indicator) {
+          //     return;
+          //   }
+
+          //   store.actions.setIndicator(indicator);
+          // };
+
+          // const moveElementIntoOverlappedCanvas = () => {
+          //   const nodes = store.query.getNodes();
+
+          //   const overlappedElements = Object.keys(nodes).filter((nodeId) => {
+          //     if (!nodeId || nodeId === ROOT_NODE) return false;
+          //     if (!store.query.node(nodeId).isCanvas()) return false;
+
+          //     const node = nodes[nodeId];
+          //     const el = node.dom;
+          //     const { x, y, width, height } = el.getBoundingClientRect();
+
+          //     return (
+          //       event.clientX > x &&
+          //       event.clientX < x + width &&
+          //       event.clientY > y &&
+          //       event.clientY < y + height
+          //     );
+          //   });
+
+          //   // Filter overlapped elements to get the top level element
+          //   const topLevelOverlappedElement = overlappedElements.find(
+          //     (elementId) => {
+          //       if (!elementId) return false;
+
+          //       const parents = store.query.node(elementId).descendants(true);
+          //       return parents.every((id) => !overlappedElements.includes(id));
+          //     }
+          //   );
+
+          //   if (topLevelOverlappedElement) {
+          //     const isIndicator = store.query
+          //       .node(topLevelOverlappedElement)
+          //       .isIndicator();
+
+          //     if (isIndicator) {
+          //       createIndicator(topLevelOverlappedElement, event);
+          //     } else if (this.dragTarget.type === 'new') {
+          //       this.dragTarget.containerId = topLevelOverlappedElement;
+          //     }
+          //   }
+          // };
+
+          // const checkIfIndicatorIsValid = () => {
+          //   if (!this.positioner) return;
+
+          //   const indicator = this.positioner.getIndicator();
+
+          //   if (!indicator) return;
+
+          //   const parentBoundingBox = indicator.placement.parent.dom.getBoundingClientRect();
+
+          //   if (!parentBoundingBox) return;
+
+          //   const isRightOfParent =
+          //     event.x > parentBoundingBox.left + parentBoundingBox.width;
+
+          //   const isLeftOfParent = event.x < parentBoundingBox.x;
+
+          //   const isAboveParent = event.y < parentBoundingBox.y;
+
+          //   const isBelowParent =
+          //     event.y > parentBoundingBox.top + parentBoundingBox.height;
+
+          //   if (
+          //     isRightOfParent ||
+          //     isBelowParent ||
+          //     isLeftOfParent ||
+          //     isAboveParent
+          //   ) {
+          //     store.actions.setIndicator(null);
+          //     this.positioner.cleanup();
+          //     this.positioner = null;
+
+          //     if (this.dragTarget.type === 'existing') {
+          //       this.dragTarget = null;
+          //     }
+          //   }
+          // };
+
+          event.craft.stopPropagation();
+          // checkIfIndicatorIsValid();
+          // moveElementIntoOverlappedCanvas();
+        });
+
         const unbindDragEnd = this.addCraftEventListener(el, 'dragend', (e) => {
           e.craft.stopPropagation();
+
+          const dragTarget = this.dragTarget;
+
+          if (!this.positioner) {
+            if (dragTarget.type === 'new') {
+              let canvasWrapper: HTMLElement;
+
+              canvasWrapper = document.getElementById('global-frame');
+              // if (dragTarget.containerId === ROOT_NODE) {
+              //   canvasWrapper = document.getElementById('global-frame');
+              // } else {
+              //   canvasWrapper = store.query.node(dragTarget.containerId).get()
+              //     .dom;
+              // }
+
+              const { x, y } = canvasWrapper.getBoundingClientRect();
+              const { scale } = store.query.getState().options.viewport;
+
+              const translateX = -x / scale + e.clientX / scale;
+              const translateY = -y / scale + e.clientY / scale;
+              const position: Position = { left: translateX, top: translateY };
+
+              store.actions.addNodeTree(dragTarget.tree, 'ROOT', 0, position);
+            }
+          }
+
           this.dropElement((dragTarget, indicator) => {
             if (dragTarget.type === 'existing') {
               return;
@@ -311,6 +543,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             const index =
               indicator.placement.index +
               (indicator.placement.where === 'after' ? 1 : 0);
+
             store.actions.addNodeTree(
               dragTarget.tree,
               indicator.placement.parent.id,
@@ -327,6 +560,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           el.removeAttribute('draggable');
           unbindDragStart();
           unbindDragEnd();
+          unbindDrag();
         };
       },
     };
