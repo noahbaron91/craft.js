@@ -34,6 +34,7 @@ export function createNode(
       isCanvas: false,
       hidden: false,
       position: { top: 0, left: 0 },
+      breakpointNodes: {},
       nodes: [],
       linkedNodes: {},
       ...newNode.data,

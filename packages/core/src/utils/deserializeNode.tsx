@@ -104,6 +104,7 @@ export const deserializeNode = (
     nodes,
     hidden,
     position,
+    breakpointNodes,
   } = nodeData;
 
   const linkedNodes = nodeData.linkedNodes || nodeData._childCanvas;
@@ -120,5 +121,6 @@ export const deserializeNode = (
     parent,
     linkedNodes: linkedNodes || {},
     nodes: nodes || [],
+    breakpointNodes,
   };
 };

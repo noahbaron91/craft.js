@@ -51,6 +51,7 @@ export type NodeData = {
   parent: NodeId;
   linkedNodes: Record<string, NodeId>;
   position: Position;
+  breakpointNodes: Record<string, NodeId>;
   nodes: NodeId[];
   hidden: boolean;
   custom?: any;

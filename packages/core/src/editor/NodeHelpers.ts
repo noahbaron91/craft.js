@@ -131,15 +131,14 @@ export function NodeHelpers(state: EditorState, id: NodeId) {
     },
     breakpoint() {
       const breakpoints = state.breakpoints;
+
       const parents = this.ancestors(true);
 
       let foundBreakpoint = null;
 
-      Object.keys(breakpoints).forEach((breakpointName) => {
-        const breakpoint = breakpoints[breakpointName];
-
-        if (parents.includes(breakpoint.nodeId)) {
-          foundBreakpoint = breakpoint;
+      Object.entries(breakpoints).forEach(([breakpointName, breakpoint]) => {
+        if (parents.includes(breakpoint.nodeId) || id === breakpoint.nodeId) {
+          foundBreakpoint = breakpointName;
         }
       });
 

@@ -65,7 +65,10 @@ const Methods = (
         );
       }
 
-      state.nodes[id] = {
+      // Use the ID from the Node object instead of generating a new ID
+      const nodeId = node.id;
+
+      state.nodes[nodeId] = {
         ...node,
         data: {
           ...node.data,
@@ -74,14 +77,14 @@ const Methods = (
       };
 
       if (node.data.nodes.length > 0) {
-        delete state.nodes[id].data.props.children;
+        delete state.nodes[nodeId].data.props.children;
         node.data.nodes.forEach((childNodeId) =>
-          iterateChildren(childNodeId, node.id)
+          iterateChildren(childNodeId, nodeId)
         );
       }
 
       Object.values(node.data.linkedNodes).forEach((linkedNodeId) =>
-        iterateChildren(linkedNodeId, node.id)
+        iterateChildren(linkedNodeId, nodeId)
       );
     };
 
@@ -474,6 +477,22 @@ const Methods = (
      */
     setPosition(id: NodeId, position: Position) {
       state.nodes[id].data.position = position;
+    },
+
+    /**
+     * Add a breakpoint node
+     * @param id
+     * @param breakpoint
+     */
+    addBreakpointNode(
+      id: NodeId,
+      breakpoint: { name: string; breakpointId: NodeId }
+    ) {
+      const { name, breakpointId: nodeId } = breakpoint;
+      state.nodes[id].data.breakpointNodes = {
+        ...state.nodes[id].data.breakpointNodes,
+        [name]: nodeId,
+      };
     },
   };
 };
