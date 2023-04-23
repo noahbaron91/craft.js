@@ -1,5 +1,5 @@
 import { deprecationWarning, ROOT_NODE } from '@noahbaron91/utils';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { useInternalEditor } from '../editor/useInternalEditor';
 import { SerializedNodes } from '../interfaces';
@@ -20,6 +20,8 @@ const RenderRootNode = () => {
       state.nodes[ROOT_NODE] && state.nodes[ROOT_NODE]._hydrationTimestamp,
     viewport: state.options.viewport,
   }));
+
+  const [middleMouseButtonIsHeld, setMiddleMouseButtonIsHeld] = useState(false);
 
   window.addEventListener('dragover', (event) => event.preventDefault());
 
@@ -72,12 +74,37 @@ const RenderRootNode = () => {
       }
     }
 
-    document.addEventListener('wheel', handleScroll, { passive: false });
+    function handleMouseMove(event: MouseEvent) {
+      if (middleMouseButtonIsHeld) {
+        setViewport((previousViewport) => {
+          const SENSITIVITY = 0.2;
 
+          previousViewport.transformX =
+            previousViewport.transformX + event.movementX * SENSITIVITY;
+          previousViewport.transformY =
+            previousViewport.transformY + event.movementY * SENSITIVITY;
+        });
+      }
+    }
+
+    function handleMouseUp() {
+      setMiddleMouseButtonIsHeld(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+    }
+
+    function handleMouseDown(event: MouseEvent) {
+      setMiddleMouseButtonIsHeld(event.button === 1);
+      // setPreviousMousePosition({ x: 0, y: 0 });
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    document.addEventListener('wheel', handleScroll, { passive: false });
+    document.addEventListener('mousedown', handleMouseDown);
     return () => {
       document.removeEventListener('wheel', handleScroll);
     };
-  }, [setViewport]);
+  }, [middleMouseButtonIsHeld, setViewport]);
 
   if (!timestamp) {
     return null;

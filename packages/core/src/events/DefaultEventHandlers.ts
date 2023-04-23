@@ -506,7 +506,14 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
         };
 
         el.addEventListener('mousedown', (event) => {
+          // Only drag on left click
+          if (event.button !== 0) {
+            event.preventDefault();
+            return;
+          }
+
           event.stopPropagation();
+
           window.addEventListener('mousemove', handleDragElement);
           window.addEventListener('mouseup', handleDragEnd);
         });
