@@ -33,18 +33,28 @@ const RenderRootNode = () => {
       if (event.ctrlKey || event.altKey) {
         if (isVerticalScroll) {
           setViewport((previousViewport) => {
-            const newScale = previousViewport.scale - deltaY / 500;
+            let newScale = previousViewport.scale - deltaY / 500;
 
             if (newScale > 10) {
-              previousViewport.scale = 10;
-              return;
+              newScale = 10;
             }
             if (newScale < 0.1) {
-              previousViewport.scale = 0.1;
-              return;
+              newScale = 0.1;
             }
 
+            const ratio = 1 - newScale / previousViewport.scale;
+            const translateX =
+              previousViewport.transformX +
+              (event.clientX - previousViewport.transformX) * ratio;
+            const translateY =
+              previousViewport.transformY +
+              (event.clientY - previousViewport.transformY) * ratio;
+
             previousViewport.scale = newScale;
+            previousViewport.transformX = translateX;
+            previousViewport.transformY = translateY;
+
+            event.preventDefault();
           });
         }
         // Pans viewport when not holding ctrl or alt
@@ -81,6 +91,8 @@ const RenderRootNode = () => {
     top: 0,
     left: 0,
     isolation: 'isolate',
+    height: `calculate(100vh / ${scale})`,
+    width: `calculate(100vw / ${scale})`,
   };
 
   return (
