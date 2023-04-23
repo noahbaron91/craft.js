@@ -494,6 +494,33 @@ const Methods = (
         [name]: nodeId,
       };
     },
+
+    /**
+     * Removes connected breakpoints
+     * @param id
+     */
+    removeBreakpointNode(id: NodeId) {
+      // Get the other breakpoint nodes if possible and remove the breakpoint from array
+      const node = query.node(id).get();
+      const breakpointNodes = node.data.breakpointNodes;
+
+      Object.entries(breakpointNodes).forEach(([_, nodeId]) => {
+        const node = query.node(nodeId).get();
+        if (!node) return;
+
+        // Removed linked node from other elements
+        const newBreakpointNodesEntires = Object.entries(
+          node.data.breakpointNodes
+        ).filter(([_, id]) => {
+          return id === nodeId;
+        });
+
+        const newBreakpoint = fromEntries(newBreakpointNodesEntires);
+        state.nodes[nodeId].data.breakpointNodes = newBreakpoint;
+      });
+
+      this.delete(id);
+    },
   };
 };
 

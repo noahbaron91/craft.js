@@ -1,4 +1,4 @@
-import { isChromium, isLinux } from '@noahbaron91/utils';
+import { ROOT_NODE, isChromium, isLinux } from '@noahbaron91/utils';
 import { isFunction } from 'lodash';
 import React from 'react';
 
@@ -265,11 +265,13 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
         const calculateTransform = (
           event: MouseEvent,
-          cb: (translateX: number, translateY) => void
+          cb: (translateX: number, translateY) => void,
+          customParent?: NodeId
         ) => {
           event.preventDefault();
 
-          const parent = store.query.node(id).ancestors(false)[0];
+          const parent =
+            customParent || store.query.node(id).ancestors(false)[0];
 
           const parentElement = store.query.node(parent).get().dom;
 
@@ -291,6 +293,59 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           cb(translateX, translateY);
         };
 
+        const getOverlappedNodeId = (event: MouseEvent) => {
+          const nodes = store.query.getNodes();
+          const parent = store.query.node(id).get().data.parent;
+
+          const { width, height } = el.getBoundingClientRect();
+          const { scale } = store.query.getState().options.viewport;
+
+          const elementWidth = width * scale;
+          const elementHeight = height * scale;
+
+          const overlappedElements = Object.keys(nodes).filter((nodeId) => {
+            if (nodeId === id) return false;
+            if (!store.query.node(nodeId).isCanvas()) return false;
+
+            const node = nodes[nodeId];
+            const el = node.dom;
+
+            const { x, y, width, height } = el.getBoundingClientRect();
+
+            const isXAxisOverlapped =
+              event.clientX < x + width - elementWidth / 2 &&
+              event.clientX > x - elementWidth / 2;
+
+            const isYAxisOverlapped =
+              event.clientY > y - elementHeight / 2 &&
+              event.clientY < y + height - elementHeight / 2;
+
+            const isOverlapped = isXAxisOverlapped && isYAxisOverlapped;
+
+            return isOverlapped;
+          });
+
+          const topLevelOverlappedElement = overlappedElements.find(
+            (elementId) => {
+              if (!elementId || elementId === id) return false;
+
+              const canMoveIn =
+                overlappedElements &&
+                topLevelOverlappedElement &&
+                parent !== topLevelOverlappedElement;
+
+              if (canMoveIn) {
+                store.actions.move(id, topLevelOverlappedElement, 0);
+              }
+
+              const parents = store.query.node(elementId).descendants(true);
+              return parents.every((id) => !overlappedElements.includes(id));
+            }
+          );
+
+          return topLevelOverlappedElement;
+        };
+
         const handleDragElement = (event: MouseEvent) => {
           const checkIfDraggedIntoCanvas = () => {
             // If a root breakpoint don't drag into anything
@@ -299,157 +354,143 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             ).some(([key, { nodeId }]) => nodeId === id);
 
             if (isBreakpoint) return;
+            const topLevelOverlappedElement = getOverlappedNodeId(event);
 
-            const nodes = store.query.getNodes();
-            const parent = store.query.node(id).get().data.parent;
-
-            const { width, height } = el.getBoundingClientRect();
-            const { scale } = store.query.getState().options.viewport;
-
-            const elementWidth = width * scale;
-            const elementHeight = height * scale;
-
-            const overlappedElements = Object.keys(nodes).filter((nodeId) => {
-              if (nodeId === id) return false;
-
-              if (!store.query.node(nodeId).isCanvas()) return false;
-
-              const node = nodes[nodeId];
-              const el = node.dom;
-
-              const { x, y, width, height } = el.getBoundingClientRect();
-
-              const isXAxisOverlapped =
-                event.clientX < x + width - elementWidth / 2 &&
-                event.clientX > x - elementWidth / 2;
-
-              const isYAxisOverlapped =
-                event.clientY > y - elementHeight / 2 &&
-                event.clientY < y + height - elementHeight / 2;
-
-              const isOverlapped = isXAxisOverlapped && isYAxisOverlapped;
-
-              return isOverlapped;
-            });
-
-            const topLevelOverlappedElement = overlappedElements.find(
-              (elementId) => {
-                if (!elementId || elementId === id) return false;
-
-                const canMoveIn =
-                  overlappedElements &&
-                  topLevelOverlappedElement &&
-                  parent !== topLevelOverlappedElement;
-
-                if (canMoveIn) {
-                  store.actions.move(id, topLevelOverlappedElement, 0);
-                }
-
-                const parents = store.query.node(elementId).descendants(true);
-                return parents.every((id) => !overlappedElements.includes(id));
-              }
-            );
-
-            const canMoveIn =
-              topLevelOverlappedElement && parent !== topLevelOverlappedElement;
+            const canMoveIn = !!topLevelOverlappedElement;
 
             if (canMoveIn) {
-              store.actions.move(id, topLevelOverlappedElement, 0);
-
               // Not located inside a breakpoint
-              if (!store.query.node(topLevelOverlappedElement).breakpoint)
+              if (!store.query.node(topLevelOverlappedElement).breakpoint()) {
+                store.actions.move(id, topLevelOverlappedElement, 0);
                 return;
+              }
 
-              // TODO: Check if breakpoint nodes exists and just move them up a level also or else add
-              calculateTransform(event, (left, top) => {
-                const breakpointNodes = store.query.getState().nodes[
+              // Check if breakpoint nodes exists and just move them up a level or else add
+              const elementBreakpointNodes = store.query.getState().nodes[id]
+                .data.breakpointNodes;
+
+              if (Object.keys(elementBreakpointNodes).length > 0) {
+                const overlappedElementBreakpointNodes = store.query.getState()
+                  .nodes[topLevelOverlappedElement].data.breakpointNodes;
+
+                calculateTransform(
+                  event,
+                  (left, top) => {
+                    Object.entries(elementBreakpointNodes).forEach(
+                      ([breakpointName, nodeId]) => {
+                        store.actions.move(
+                          nodeId,
+                          overlappedElementBreakpointNodes[breakpointName],
+                          0
+                        );
+
+                        store.actions.setPosition(nodeId, { left, top });
+                      }
+                    );
+                  },
                   topLevelOverlappedElement
-                ].data.breakpointNodes;
+                );
+              } else {
+                calculateTransform(
+                  event,
+                  (left, top) => {
+                    const breakpointNodes = store.query.getState().nodes[
+                      topLevelOverlappedElement
+                    ].data.breakpointNodes;
 
-                const newBreakpointNodes = [id];
+                    const newBreakpointNodes = [id];
 
-                Object.entries(breakpointNodes).forEach(([_, nodeId]) => {
-                  const clonedTree = cloneNodeTree(id, store);
-                  store.actions.addNodeTree(clonedTree, nodeId, 0, {
-                    left,
-                    top,
-                  });
+                    Object.entries(breakpointNodes).forEach(([_, nodeId]) => {
+                      const clonedTree = cloneNodeTree(id, store);
+                      store.actions.addNodeTree(clonedTree, nodeId, 0, {
+                        left,
+                        top,
+                      });
 
-                  newBreakpointNodes.push(clonedTree.rootNodeId);
-                });
-
-                // Sets linked breakpoint nodes on each instance
-                newBreakpointNodes.forEach((nodeId) => {
-                  newBreakpointNodes.forEach((breakpointId) => {
-                    if (nodeId === breakpointId) return;
-                    const breakpointName = store.query
-                      .node(breakpointId)
-                      .breakpoint();
-
-                    store.actions.addBreakpointNode(nodeId, {
-                      name: breakpointName,
-                      breakpointId: breakpointId,
+                      newBreakpointNodes.push(clonedTree.rootNodeId);
                     });
-                  });
-                });
-              });
+
+                    // Update linked breakpoint nodes
+                    newBreakpointNodes.forEach((nodeId) => {
+                      newBreakpointNodes.forEach((breakpointId) => {
+                        if (nodeId === breakpointId) return;
+                        const breakpointName = store.query
+                          .node(breakpointId)
+                          .breakpoint();
+
+                        store.actions.addBreakpointNode(nodeId, {
+                          name: breakpointName,
+                          breakpointId: breakpointId,
+                        });
+                      });
+                    });
+
+                    // Set before moving to avoid false detection when checking if dragged outside of parent
+                    store.actions.setPosition(id, { left, top });
+                  },
+                  topLevelOverlappedElement
+                );
+              }
+
+              store.actions.move(id, topLevelOverlappedElement, 0);
             }
           };
 
-          // const moveElementIntoOverlappedCanvas = () => {
-          //   const nodes = store.query.getNodes();
+          const checkIfDraggedOutsideOfParent = () => {
+            const parent = store.query.node(id).get().data.parent;
+            const parentElement = store.query.node(parent).get().dom;
 
-          //   const overlappedElements = Object.keys(nodes).filter((nodeId) => {
-          //     if (nodeId === id) return false;
+            const element = store.query.node(id).get().dom;
+            const elementBoundingBox = element.getBoundingClientRect();
+            const parentBoundingBox = parentElement.getBoundingClientRect();
 
-          //     if (!store.query.node(nodeId).isCanvas()) return false;
+            const isRightOfParent =
+              elementBoundingBox.x >
+              parentBoundingBox.left + parentBoundingBox.width;
 
-          //     const node = nodes[nodeId];
-          //     const el = node.dom;
-          //     const { x, y, width, height } = el.getBoundingClientRect();
+            const isLeftOfParent =
+              elementBoundingBox.x + elementBoundingBox.width <
+              parentBoundingBox.x;
 
-          //     return (
-          //       event.clientX > x &&
-          //       event.clientX < x + width &&
-          //       event.clientY > y &&
-          //       event.clientY < y + height
-          //     );
-          //   });
+            const isAboveParent =
+              elementBoundingBox.y + elementBoundingBox.height <
+              parentBoundingBox.y;
 
-          //   // Filter overlapped elements to get the top level element
-          //   const topLevelOverlappedElement = overlappedElements.find(
-          //     (elementId) => {
-          //       if (!elementId || elementId === id) return false;
+            const isBelowParent =
+              elementBoundingBox.y >
+              parentBoundingBox.top + parentBoundingBox.height;
 
-          //       const canMoveIn =
-          //         overlappedElements &&
-          //         topLevelOverlappedElement &&
-          //         parent !== topLevelOverlappedElement;
+            if (parent !== ROOT_NODE) {
+              if (
+                isRightOfParent ||
+                isBelowParent ||
+                isLeftOfParent ||
+                isAboveParent
+              ) {
+                const overlappedNodeId = getOverlappedNodeId(event) || 'ROOT';
 
-          //       if (canMoveIn) {
-          //         store.actions.move(id, topLevelOverlappedElement, 0);
-          //       }
+                const parentParentHasBreakpoint = !!store.query
+                  .node(overlappedNodeId)
+                  .breakpoint();
 
-          //       const parents = store.query.node(elementId).descendants(true);
-          //       return parents.every((id) => !overlappedElements.includes(id));
-          //     }
-          //   );
+                const breakpointNodes = store.query.node(id).get().data
+                  .breakpointNodes;
 
-          // const canMoveIn =
-          //   topLevelOverlappedElement && parent !== topLevelOverlappedElement;
+                if (parentParentHasBreakpoint) {
+                  Object.entries(breakpointNodes).forEach(([_, nodeId]) => {
+                    store.actions.move(nodeId, overlappedNodeId, 0);
+                  });
+                } else {
+                  store.actions.move(id, overlappedNodeId, 0);
 
-          //   if (canMoveIn) {
-          //     const isIndicator = store.query
-          //       .node(topLevelOverlappedElement)
-          //       .isIndicator();
-
-          //     if (isIndicator) {
-          //       createIndicator(topLevelOverlappedElement, event);
-          //     } else {
-          //       store.actions.move(id, topLevelOverlappedElement, 0);
-          //     }
-          //   }
-          // };
+                  // Delete linked nodes
+                  Object.entries(breakpointNodes).forEach(([_, nodeId]) => {
+                    store.actions.removeBreakpointNode(nodeId);
+                  });
+                }
+              }
+            }
+          };
 
           calculateTransform(event, (left, top) => {
             const newPositon = {
@@ -460,6 +501,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             store.actions.setPosition(id, newPositon);
           });
 
+          checkIfDraggedOutsideOfParent();
           checkIfDraggedIntoCanvas();
         };
 
