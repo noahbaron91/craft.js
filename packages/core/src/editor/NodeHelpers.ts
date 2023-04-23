@@ -32,6 +32,9 @@ export function NodeHelpers(state: EditorState, id: NodeId) {
     isRoot() {
       return node.id === ROOT_NODE;
     },
+    isIndicator() {
+      return !!node.data.isIndicator;
+    },
     isLinkedNode() {
       return (
         node.data.parent &&

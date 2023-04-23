@@ -12,20 +12,25 @@ type RenderNodeToElementType = {
 export const RenderNodeToElement: React.FC<React.PropsWithChildren<
   RenderNodeToElementType
 >> = ({ render }) => {
-  const { hidden, position, dom, parent, id } = useInternalNode((node) => ({
-    hidden: node.data.hidden,
-    position: node.data.position,
-    dom: node.dom,
-    parent: node.data.parent,
-  }));
+  const { hidden, position, dom, parent, id, isDragging } = useInternalNode(
+    (node) => ({
+      hidden: node.data.hidden,
+      position: node.data.position,
+      dom: node.dom,
+      parent: node.data.parent,
+      isDragging: node.events.dragged,
+    })
+  );
 
   const {
     onRender,
     breakpoints,
+    parentIsIndicator,
     actions: { addBreakpointNode },
   } = useInternalEditor((state) => ({
     onRender: state.options.onRender,
     breakpoints: state.breakpoints,
+    parentIsIndicator: parent ? state.nodes[parent].data.isIndicator : false,
   }));
 
   const { left, top } = position;
@@ -90,11 +95,17 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
   //   }
   // };
 
-  if (dom) {
+  if (dom && !parentIsIndicator) {
     if (parent === ROOT_NODE) {
       dom.style.position = 'fixed';
     } else {
       dom.style.position = 'absolute';
+    }
+
+    if (isDragging) {
+      dom.style.zIndex = '100000';
+    } else {
+      dom.style.zIndex = 'auto';
     }
 
     const transform = `translateX(${left}px) translateY(${top}px)`;

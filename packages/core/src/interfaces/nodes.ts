@@ -55,6 +55,7 @@ export type NodeData = {
   nodes: NodeId[];
   hidden: boolean;
   custom?: any;
+  isIndicator: boolean;
   _childCanvas?: Record<string, NodeId>; // TODO: Deprecate in favour of linkedNodes
 };
 
@@ -74,6 +75,7 @@ export type ReduceCompType =
 export type ReducedComp = {
   type: ReduceCompType;
   isCanvas: boolean;
+  isIndicator: boolean;
   props: any;
 };
 

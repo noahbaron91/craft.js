@@ -26,6 +26,7 @@ export function createNode(
     _hydrationTimestamp: Date.now(),
     data: {
       type: actualType,
+      isIndicator: false,
       name: getNodeTypeName(actualType),
       displayName: getNodeTypeName(actualType),
       props: {},

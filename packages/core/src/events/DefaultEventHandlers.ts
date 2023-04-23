@@ -263,6 +263,33 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
         let initialXPosition = null;
         let initialYPosition = null;
 
+        const createIndicator = (containerId: string, event: MouseEvent) => {
+          if (this.positioner) return;
+
+          this.dragTarget = {
+            type: 'existing',
+            nodes: [id],
+          };
+
+          this.positioner = new Positioner(this.options.store, this.dragTarget);
+
+          if (!this.positioner) {
+            return;
+          }
+
+          const indicator = this.positioner.computeIndicator(
+            containerId,
+            event.clientX,
+            event.clientY
+          );
+
+          if (!indicator) {
+            return;
+          }
+
+          store.actions.setIndicator(indicator);
+        };
+
         const calculateTransform = (
           event: MouseEvent,
           cb: (translateX: number, translateY) => void,
@@ -359,6 +386,12 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             const canMoveIn = !!topLevelOverlappedElement;
 
             if (canMoveIn) {
+              // Check if an indicator
+              if (store.query.node(topLevelOverlappedElement).isIndicator()) {
+                createIndicator(topLevelOverlappedElement, event);
+                return;
+              }
+
               // Not located inside a breakpoint
               if (!store.query.node(topLevelOverlappedElement).breakpoint()) {
                 store.actions.move(id, topLevelOverlappedElement, 0);
@@ -444,21 +477,35 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             const elementBoundingBox = element.getBoundingClientRect();
             const parentBoundingBox = parentElement.getBoundingClientRect();
 
-            const isRightOfParent =
+            let isRightOfParent =
               elementBoundingBox.x >
               parentBoundingBox.left + parentBoundingBox.width;
 
-            const isLeftOfParent =
+            let isLeftOfParent =
               elementBoundingBox.x + elementBoundingBox.width <
               parentBoundingBox.x;
 
-            const isAboveParent =
+            let isAboveParent =
               elementBoundingBox.y + elementBoundingBox.height <
               parentBoundingBox.y;
 
-            const isBelowParent =
+            let isBelowParent =
               elementBoundingBox.y >
               parentBoundingBox.top + parentBoundingBox.height;
+
+            if (store.query.node(parent).isIndicator()) {
+              isRightOfParent =
+                event.clientX >
+                parentBoundingBox.left + parentBoundingBox.width;
+
+              isLeftOfParent = event.clientX < parentBoundingBox.x;
+
+              isAboveParent = event.clientY < parentBoundingBox.y;
+
+              isBelowParent =
+                event.clientY >
+                parentBoundingBox.top + parentBoundingBox.height;
+            }
 
             if (parent !== ROOT_NODE) {
               if (
@@ -468,10 +515,17 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
                 isAboveParent
               ) {
                 const overlappedNodeId = getOverlappedNodeId(event) || 'ROOT';
-
                 const parentParentHasBreakpoint = !!store.query
                   .node(overlappedNodeId)
                   .breakpoint();
+
+                if (store.query.node(parent).isIndicator()) {
+                  // Cleanup indicator
+                  store.actions.setIndicator(null);
+                  this.positioner?.cleanup();
+                  this.positioner = null;
+                  this.dragTarget = null;
+                }
 
                 const breakpointNodes = store.query.node(id).get().data
                   .breakpointNodes;
@@ -492,6 +546,65 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             }
           };
 
+          const checkIfIndicatorIsValid = () => {
+            if (!this.positioner) return;
+
+            const indicator = this.positioner.getIndicator();
+            const element = store.query.node(id).get().dom;
+            const elementBoundingBox = element.getBoundingClientRect();
+
+            const parentBoundingBox = indicator.placement.parent.dom.getBoundingClientRect();
+
+            const isRightOfParent =
+              elementBoundingBox.x >
+              parentBoundingBox.left + parentBoundingBox.width;
+
+            const isLeftOfParent =
+              elementBoundingBox.x + elementBoundingBox.width <
+              parentBoundingBox.x;
+
+            const isAboveParent =
+              elementBoundingBox.y + elementBoundingBox.height <
+              parentBoundingBox.y;
+
+            const isBelowParent =
+              elementBoundingBox.y >
+              parentBoundingBox.top + parentBoundingBox.height;
+
+            if (
+              isRightOfParent ||
+              isBelowParent ||
+              isLeftOfParent ||
+              isAboveParent
+            ) {
+              store.actions.setIndicator(null);
+              this.positioner?.cleanup();
+              this.positioner = null;
+              this.dragTarget = null;
+            }
+          };
+
+          // Updates drop positions while dragging
+          const computeIndicator = () => {
+            if (!this.positioner) {
+              return;
+            }
+
+            const currentIndicator = this.positioner.getIndicator();
+
+            const indicator = this.positioner.computeIndicator(
+              currentIndicator.placement.parent.id,
+              event.clientX,
+              event.clientY
+            );
+
+            if (!indicator) {
+              return;
+            }
+
+            store.actions.setIndicator(indicator);
+          };
+
           calculateTransform(event, (left, top) => {
             const newPositon = {
               top,
@@ -502,7 +615,9 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           });
 
           checkIfDraggedOutsideOfParent();
+          checkIfIndicatorIsValid();
           checkIfDraggedIntoCanvas();
+          computeIndicator();
         };
 
         el.addEventListener('mousedown', (event) => {
@@ -512,6 +627,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             return;
           }
 
+          store.actions.setNodeEvent('dragged', id);
           event.stopPropagation();
 
           window.addEventListener('mousemove', handleDragElement);
@@ -519,12 +635,29 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
         });
 
         const handleDragEnd = () => {
+          store.actions.setNodeEvent('dragged', null);
+
           // Reset drag postition
           initialXPosition = null;
           initialYPosition = null;
 
           window.removeEventListener('mousemove', handleDragElement);
           window.removeEventListener('mouseup', handleDragEnd);
+
+          if (!this.positioner) return;
+
+          // Drop element
+          const indicator = this.positioner.getIndicator();
+          const index =
+            indicator.placement.index +
+            (indicator.placement.where === 'after' ? 1 : 0);
+          store.actions.move(id, indicator.placement.parent.id, index);
+
+          // Cleanup indicator
+          store.actions.setIndicator(null);
+          this.dragTarget = null;
+          this.positioner.cleanup();
+          this.positioner = null;
         };
 
         return () => {
