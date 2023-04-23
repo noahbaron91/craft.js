@@ -25,6 +25,8 @@ const RenderRootNode = () => {
 
   useEffect(() => {
     function handleScroll(event: WheelEvent) {
+      event.preventDefault();
+
       const { deltaX, deltaY } = event;
 
       const isVerticalScroll = Math.abs(deltaY) > Math.abs(deltaX);
@@ -70,7 +72,7 @@ const RenderRootNode = () => {
       }
     }
 
-    document.addEventListener('wheel', handleScroll);
+    document.addEventListener('wheel', handleScroll, { passive: false });
 
     return () => {
       document.removeEventListener('wheel', handleScroll);
