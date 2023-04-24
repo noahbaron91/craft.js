@@ -1,5 +1,5 @@
 import { deprecationWarning, ROOT_NODE } from '@noahbaron91/utils';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { useInternalEditor } from '../editor/useInternalEditor';
 import { SerializedNodes } from '../interfaces';
@@ -21,8 +21,6 @@ const RenderRootNode = () => {
     viewport: state.options.viewport,
   }));
 
-  const [middleMouseButtonIsHeld, setMiddleMouseButtonIsHeld] = useState(false);
-
   window.addEventListener('dragover', (event) => event.preventDefault());
 
   useEffect(() => {
@@ -36,8 +34,9 @@ const RenderRootNode = () => {
       // Zoom in when scolling and holding ctrl or alt
       if (event.ctrlKey || event.altKey) {
         if (isVerticalScroll) {
+          const SENSITIVITY = 0.0005;
           setViewport((previousViewport) => {
-            let newScale = previousViewport.scale - deltaY / 500;
+            let newScale = previousViewport.scale - deltaY * SENSITIVITY;
 
             if (newScale > 10) {
               newScale = 10;
@@ -75,36 +74,38 @@ const RenderRootNode = () => {
     }
 
     function handleMouseMove(event: MouseEvent) {
-      if (middleMouseButtonIsHeld) {
-        setViewport((previousViewport) => {
-          const SENSITIVITY = 0.2;
+      setViewport((previousViewport) => {
+        const SENSITIVITY = 0.75;
 
-          previousViewport.transformX =
-            previousViewport.transformX + event.movementX * SENSITIVITY;
-          previousViewport.transformY =
-            previousViewport.transformY + event.movementY * SENSITIVITY;
-        });
-      }
+        previousViewport.transformX =
+          previousViewport.transformX + event.movementX * SENSITIVITY;
+        previousViewport.transformY =
+          previousViewport.transformY + event.movementY * SENSITIVITY;
+      });
     }
 
     function handleMouseUp() {
-      setMiddleMouseButtonIsHeld(false);
       document.removeEventListener('mousemove', handleMouseMove);
     }
 
     function handleMouseDown(event: MouseEvent) {
-      setMiddleMouseButtonIsHeld(event.button === 1);
-      // setPreviousMousePosition({ x: 0, y: 0 });
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      event.stopPropagation();
+
+      if (event.button === 1) {
+        document.addEventListener('mousemove', handleMouseMove);
+      }
     }
 
+    document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('wheel', handleScroll, { passive: false });
     document.addEventListener('mousedown', handleMouseDown);
+
     return () => {
       document.removeEventListener('wheel', handleScroll);
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [middleMouseButtonIsHeld, setViewport]);
+  }, [setViewport]);
 
   if (!timestamp) {
     return null;

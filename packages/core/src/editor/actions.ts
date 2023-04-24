@@ -9,6 +9,7 @@ import {
   CallbacksFor,
   Delete,
   ERROR_NOT_IN_RESOLVER,
+  getRandomId,
 } from '@noahbaron91/utils';
 import invariant from 'tiny-invariant';
 
@@ -230,6 +231,23 @@ const Methods = (
     },
 
     /**
+     * Add multiple NodeTrees to the editor
+     * @param trees
+     */
+    addMultipleNodeTrees(
+      trees: {
+        newNodeTree: NodeTree;
+        breakpointParent: string;
+        index: number;
+        position?: Position;
+      }[]
+    ) {
+      trees.forEach(({ breakpointParent, index, newNodeTree, position }) => {
+        this.addNodeTree(newNodeTree, breakpointParent, index);
+      });
+    },
+
+    /**
      * Delete a Node
      * @param id
      */
@@ -306,6 +324,88 @@ const Methods = (
 
         state.nodes[targetId].data.parent = newParentId;
         currentParentNodes.splice(currentParentNodes.indexOf('marked'), 1);
+      });
+    },
+
+    /**
+     * Move multiple elements in one action
+     * @param moveElements
+     */
+    moveMultiple(
+      moveElements: {
+        selector: NodeSelector;
+        newParentId: NodeId;
+        index: number;
+      }[]
+    ) {
+      moveElements.forEach((moveElement) => {
+        this.move(
+          moveElement.selector,
+          moveElement.newParentId,
+          moveElement.index
+        );
+      });
+    },
+
+    generateBreakpointNodes(nodeId: NodeId, breakpointName: string) {
+      const iterateChildren = (id: NodeId) => {
+        const node = query.node(id).get();
+
+        let breakpointNodes = {};
+        // Create breakpoint nodes
+        Object.keys(query.getState().breakpoints).forEach((name) => {
+          if (breakpointName === name) {
+            breakpointNodes = { ...breakpointNodes, [name]: id };
+            return;
+          }
+
+          breakpointNodes = { ...breakpointNodes, [name]: getRandomId() };
+        });
+
+        state.nodes[id].data.breakpointNodes = breakpointNodes;
+
+        if (node.data.nodes.length > 0) {
+          delete state.nodes[nodeId].data.props.children;
+          node.data.nodes.forEach((childNodeId) =>
+            iterateChildren(childNodeId)
+          );
+        }
+
+        Object.values(node.data.linkedNodes).forEach((linkedNodeId) =>
+          iterateChildren(linkedNodeId)
+        );
+      };
+
+      iterateChildren(nodeId);
+    },
+
+    removeBreakpointNodes(nodeId: NodeId) {
+      const iterateChildren = (id: NodeId) => {
+        const node = query.node(id).get();
+
+        // Reset breakpoint nodes
+        state.nodes[id].data.breakpointNodes = null;
+
+        if (node.data.nodes.length > 0) {
+          delete state.nodes[nodeId].data.props.children;
+          node.data.nodes.forEach((childNodeId) =>
+            iterateChildren(childNodeId)
+          );
+        }
+
+        Object.values(node.data.linkedNodes).forEach((linkedNodeId) =>
+          iterateChildren(linkedNodeId)
+        );
+      };
+
+      iterateChildren(nodeId);
+
+      const removeBreakpointNodes = query.node(nodeId).get().data
+        .breakpointNodes;
+
+      Object.values(removeBreakpointNodes).forEach((removeId) => {
+        if (removeId === nodeId) return;
+        deleteNode(removeId);
       });
     },
 
@@ -500,26 +600,36 @@ const Methods = (
      * @param id
      */
     removeBreakpointNode(id: NodeId) {
-      // Get the other breakpoint nodes if possible and remove the breakpoint from array
-      const node = query.node(id).get();
-      const breakpointNodes = node.data.breakpointNodes;
+      const removeProperty = (id: string) => {
+        // Get the other breakpoint nodes if possible and remove the breakpoint from array
+        const node = query.node(id).get();
+        const breakpointNodes = node.data.breakpointNodes;
 
-      Object.entries(breakpointNodes).forEach(([_, nodeId]) => {
-        const node = query.node(nodeId).get();
-        if (!node) return;
+        Object.entries(breakpointNodes).forEach(([_, nodeId]) => {
+          const node = query.node(nodeId).get();
+          if (!node) return;
 
-        // Removed linked node from other elements
-        const newBreakpointNodesEntires = Object.entries(
-          node.data.breakpointNodes
-        ).filter(([_, id]) => {
-          return id === nodeId;
+          // Removed linked node from other elements
+          const newBreakpointNodesEntires = Object.entries(
+            node.data.breakpointNodes
+          ).filter(([_, id]) => {
+            return id === nodeId;
+          });
+
+          const newBreakpoint = fromEntries(newBreakpointNodesEntires);
+          state.nodes[nodeId].data.breakpointNodes = newBreakpoint;
         });
 
-        const newBreakpoint = fromEntries(newBreakpointNodesEntires);
-        state.nodes[nodeId].data.breakpointNodes = newBreakpoint;
+        this.delete(id);
+      };
+
+      const nodes = query.node(id).get().data.nodes;
+
+      nodes.forEach((id) => {
+        removeProperty(id);
       });
 
-      this.delete(id);
+      removeProperty(id);
     },
   };
 };

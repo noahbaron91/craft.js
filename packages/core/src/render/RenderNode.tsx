@@ -38,15 +38,13 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
   // Update breakpoints
   useEffectOnce(() => {
     // Check if id is a root id
-    // If so, then update the breakpointNodes of other root nodes
+    // If it is, then update the breakpointNodes of other root nodes
     const isRootBreakpoint = Object.entries(breakpoints).find(
       ([_, breakpoint]) => breakpoint.nodeId === id
     );
 
     if (isRootBreakpoint) {
       Object.entries(breakpoints).forEach(([breakpointName, breakpoint]) => {
-        if (breakpoint.nodeId === id) return;
-
         addBreakpointNode(id, {
           name: breakpointName,
           breakpointId: breakpoint.nodeId,
@@ -54,46 +52,6 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
       });
     }
   });
-
-  // const updatePositions = () => {
-  //   if (dom && position && parent) {
-  //     const parent = store.query.node(id).ancestors(false)[0];
-  //     const { top, left } = position;
-
-  //     const styles = getComputedStyle(dom);
-  //     if (!styles) return;
-
-  //     const positionStyle = styles.getPropertyValue('position');
-  //     const zIndex = styles.getPropertyValue('z-index');
-
-  //     if (isDragging) {
-  //       if (parent === ROOT_NODE && positionStyle !== 'fixed') {
-  //         dom.style.position = 'fixed';
-  //       }
-
-  //       if (parent !== ROOT_NODE && positionStyle !== 'absolute') {
-  //         dom.style.position = 'absolute';
-  //       }
-
-  //       if (zIndex !== '99999') {
-  //         dom.style.zIndex = '99999';
-  //       }
-  //     }
-
-  //     if (!parentIsIndicator) {
-  //       if (parent !== ROOT_NODE && positionStyle !== 'absolute') {
-  //         dom.style.position = 'absolute';
-  //       }
-
-  //       if (parent === ROOT_NODE && positionStyle !== 'fixed') {
-  //         dom.style.position = 'fixed';
-  //       }
-
-  //       const transform = `translateX(${left}px) translateY(${top}px)`;
-  //       dom.style.transform = transform;
-  //     }
-  //   }
-  // };
 
   if (dom && !parentIsIndicator) {
     if (parent === ROOT_NODE) {

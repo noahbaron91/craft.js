@@ -48,6 +48,8 @@ export interface Indicator {
   error: string | null;
 }
 
+export type Breakpoints = Record<string, { width: number; nodeId: NodeId }>;
+
 export type Viewport = {
   scale: number;
   transformX: number;
@@ -62,7 +64,7 @@ export type EditorState = {
   options: Options;
   handlers: CoreEventHandlers;
   indicator: Indicator;
-  breakpoints: Record<string, { width: number; nodeId: NodeId }>;
+  breakpoints: Breakpoints;
 };
 
 export type ConnectedEditor<S = null> = useInternalEditorReturnType<S>;

@@ -2,7 +2,7 @@ import {
   ERROR_TOP_LEVEL_ELEMENT_NO_ID,
   useEffectOnce,
 } from '@noahbaron91/utils';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import invariant from 'tiny-invariant';
 
 import { NodeElement } from './NodeElement';
@@ -86,6 +86,36 @@ export function Element<T extends React.ElementType>({
       setLinkedNodeId(linkedNodeId);
     }
   });
+
+  // Add breakpoint nodes from linked nodes
+  useEffect(() => {
+    const linkedNodes = node.data.linkedNodes;
+    const breakpointNodes = node.data.breakpointNodes;
+
+    if (!breakpointNodes) return;
+
+    Object.entries(linkedNodes).forEach(([linkedId, nodeId]) => {
+      Object.entries(breakpointNodes).forEach(
+        ([breakpoint, breakpointNodeId]) => {
+          const newLinedNodes = query.node(breakpointNodeId).get().data
+            .linkedNodes;
+
+          const newNodeId = newLinedNodes[linkedId];
+
+          actions.addBreakpointNode(nodeId, {
+            breakpointId: newNodeId,
+            name: breakpoint,
+          });
+        }
+      );
+    });
+  }, [
+    actions,
+    node.data.breakpointNodes,
+    node.data.linkedNodes,
+    node.data.parent,
+    query,
+  ]);
 
   return linkedNodeId ? <NodeElement id={linkedNodeId} /> : null;
 }
