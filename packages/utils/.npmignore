@@ -1,4 +1,13 @@
+# Exclude these files and folders
 src
 rollup.config.js
 tsconfig.json
 nodemon.json
+.rollup.cache
+.tgz
+.yalc
+
+
+# Include these files and folders
+!dist
+!lib
