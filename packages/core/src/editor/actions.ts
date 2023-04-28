@@ -11,6 +11,7 @@ import {
   ERROR_NOT_IN_RESOLVER,
   getRandomId,
 } from '@noahbaron91/utils';
+import { isEqual } from 'lodash';
 import invariant from 'tiny-invariant';
 
 import { QueryMethods } from './query';
@@ -243,7 +244,7 @@ const Methods = (
       }[]
     ) {
       trees.forEach(({ breakpointParent, index, newNodeTree, position }) => {
-        this.addNodeTree(newNodeTree, breakpointParent, index);
+        this.addNodeTree(newNodeTree, breakpointParent, index, position);
       });
     },
 
@@ -293,8 +294,14 @@ const Methods = (
      * @param targetId
      * @param newParentId
      * @param index
+     * @param position
      */
-    move(selector: NodeSelector, newParentId: NodeId, index: number) {
+    move(
+      selector: NodeSelector,
+      newParentId: NodeId,
+      index: number,
+      position?: Position
+    ) {
       const targets = getNodesFromSelector(state.nodes, selector, {
         existOnly: true,
       });
@@ -324,6 +331,10 @@ const Methods = (
 
         state.nodes[targetId].data.parent = newParentId;
         currentParentNodes.splice(currentParentNodes.indexOf('marked'), 1);
+
+        if (position) {
+          state.nodes[targetId].data.position = position;
+        }
       });
     },
 
@@ -526,20 +537,26 @@ const Methods = (
       selector: NodeSelector<NodeSelectorType.Id>,
       cb: (props: any) => void
     ) {
-      const selectedNodes = [...selector];
+      let selectedNodes: NodeId[] = [];
 
-      // Add linked breakpoint nodes
+      if (typeof selector === 'string') {
+        selectedNodes = [selector];
+      } else {
+        selectedNodes = Array.from(selector);
+      }
+
+      // // Add linked breakpoint nodes
       selectedNodes.forEach((nodeId) => {
         const node = query.node(nodeId).get();
         if (!node) return;
 
-        const breakpointNodes = Object.values(node.data.breakpointNodes);
+        const breakpointNodes = node.data.breakpointNodes;
         if (!breakpointNodes) return;
 
-        selectedNodes.push(...breakpointNodes);
+        selectedNodes.push(...Object.values(breakpointNodes));
       });
 
-      const targets = getNodesFromSelector(state.nodes, selector, {
+      const targets = getNodesFromSelector(state.nodes, selectedNodes, {
         idOnly: true,
         existOnly: true,
       });
@@ -607,11 +624,19 @@ const Methods = (
         if (isNotBreakpointRoot && currentBreakpoint === 'ROOT') {
           Object.values(breakpointNodes).forEach((nodeId) => {
             if (nodeId === id) return;
+
+            const isIdentical = isEqual(
+              query.node(nodeId).get().data.position,
+              query.node(id).get().data.position
+            );
+
+            // Update only if position is identical
+            if (!isIdentical) return;
+
             state.nodes[nodeId].data.position = position;
           });
         }
       }
-
       state.nodes[id].data.position = position;
     },
 
