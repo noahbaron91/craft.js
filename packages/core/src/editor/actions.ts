@@ -129,6 +129,31 @@ const Methods = (
     return parent;
   };
 
+  const getLinkedBreakpointNodes = (
+    nodeId: NodeSelector<NodeSelectorType.Id>
+  ) => {
+    let selectedNodes: NodeId[] = [];
+
+    if (typeof nodeId === 'string') {
+      selectedNodes = [nodeId];
+    } else {
+      selectedNodes = Array.from(nodeId);
+    }
+
+    // Add linked breakpoint nodes
+    selectedNodes.forEach((nodeId) => {
+      const node = query.node(nodeId).get();
+      if (!node) return;
+
+      const breakpointNodes = node.data.breakpointNodes;
+      if (!breakpointNodes) return;
+
+      selectedNodes.push(...Object.values(breakpointNodes));
+    });
+
+    return selectedNodes;
+  };
+
   const deleteNode = (id: NodeId) => {
     const targetNode = state.nodes[id],
       parentNode = state.nodes[targetNode.data.parent];
@@ -264,6 +289,13 @@ const Methods = (
           ERROR_DELETE_TOP_LEVEL_NODE
         );
         deleteNode(node.id);
+
+        const breakpointNodes = node.data.breakpointNodes;
+
+        Object.values(breakpointNodes).forEach((nodeId) => {
+          if (nodeId === node.id) return;
+          state.nodes[nodeId] && deleteNode(nodeId);
+        });
       });
     },
 
@@ -537,24 +569,7 @@ const Methods = (
       selector: NodeSelector<NodeSelectorType.Id>,
       cb: (props: any) => void
     ) {
-      let selectedNodes: NodeId[] = [];
-
-      if (typeof selector === 'string') {
-        selectedNodes = [selector];
-      } else {
-        selectedNodes = Array.from(selector);
-      }
-
-      // // Add linked breakpoint nodes
-      selectedNodes.forEach((nodeId) => {
-        const node = query.node(nodeId).get();
-        if (!node) return;
-
-        const breakpointNodes = node.data.breakpointNodes;
-        if (!breakpointNodes) return;
-
-        selectedNodes.push(...Object.values(breakpointNodes));
-      });
+      const selectedNodes = getLinkedBreakpointNodes(selector);
 
       const targets = getNodesFromSelector(state.nodes, selectedNodes, {
         idOnly: true,
