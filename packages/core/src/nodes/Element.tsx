@@ -9,7 +9,7 @@ import { NodeElement } from './NodeElement';
 import { useInternalNode } from './useInternalNode';
 
 import { useInternalEditor } from '../editor/useInternalEditor';
-import { NodeId } from '../interfaces';
+import { NodeId, Position } from '../interfaces';
 
 export const defaultElementProps = {
   is: 'div',
@@ -17,12 +17,14 @@ export const defaultElementProps = {
   indicator: false,
   custom: {},
   hidden: false,
+  position: { top: 0, left: 0 },
 };
 
 export const elementPropToNodeData = {
   is: 'type',
   canvas: 'isCanvas',
   indicator: 'isIndicator',
+  position: 'position',
 };
 
 export type Element<T extends React.ElementType> = {
@@ -32,6 +34,7 @@ export type Element<T extends React.ElementType> = {
   children?: React.ReactNode;
   canvas?: boolean;
   indicator?: boolean;
+  position?: Position;
 } & React.ComponentProps<T>;
 
 export function Element<T extends React.ElementType>({

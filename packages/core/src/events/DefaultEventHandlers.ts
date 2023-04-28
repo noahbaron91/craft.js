@@ -771,18 +771,24 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
               const id = dragTarget.tree.rootNodeId;
               const topLevelOverlappedElement = indicator.placement.parent.id;
-
+              const targetBreakpointName = store.query
+                .node(topLevelOverlappedElement)
+                .breakpoint();
               const breakpointNodes = store.query.getState().nodes[
                 topLevelOverlappedElement
               ].data.breakpointNodes;
 
               const newBreakpointNodes = [id];
 
-              Object.entries(breakpointNodes).forEach(([_, nodeId]) => {
-                const clonedTree = cloneNodeTree(dragTarget.tree, store);
-                store.actions.addNodeTree(clonedTree, nodeId, index);
-                newBreakpointNodes.push(clonedTree.rootNodeId);
-              });
+              Object.entries(breakpointNodes).forEach(
+                ([breakpointNode, nodeId]) => {
+                  if (targetBreakpointName === breakpointNode) return;
+
+                  const clonedTree = cloneNodeTree(dragTarget.tree, store);
+                  store.actions.addNodeTree(clonedTree, nodeId, index);
+                  newBreakpointNodes.push(clonedTree.rootNodeId);
+                }
+              );
 
               store.actions.addNodeTree(
                 dragTarget.tree,

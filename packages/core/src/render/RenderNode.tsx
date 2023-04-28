@@ -68,6 +68,8 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
 
     const transform = `translateX(${left}px) translateY(${top}px)`;
     dom.style.transform = transform;
+    // Fixes weird line artifacts when dragging
+    dom.style.backfaceVisibility = 'hidden';
   }
 
   // don't display the node since it's hidden

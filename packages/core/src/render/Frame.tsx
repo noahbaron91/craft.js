@@ -24,6 +24,8 @@ const RenderRootNode = () => {
   window.addEventListener('dragover', (event) => event.preventDefault());
 
   useEffect(() => {
+    const editor = document.getElementById('editor');
+
     function handleScroll(event: WheelEvent) {
       event.preventDefault();
 
@@ -85,6 +87,7 @@ const RenderRootNode = () => {
     }
 
     function handleMouseUp() {
+      document.body.style.cursor = 'default';
       document.removeEventListener('mousemove', handleMouseMove);
     }
 
@@ -92,16 +95,21 @@ const RenderRootNode = () => {
       event.stopPropagation();
 
       if (event.button === 1) {
+        document.body.style.cursor = 'grab';
         document.addEventListener('mousemove', handleMouseMove);
       }
     }
 
+    editor.addEventListener('wheel', handleScroll, {
+      passive: false,
+    });
+
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('wheel', handleScroll, { passive: false });
     document.addEventListener('mousedown', handleMouseDown);
 
     return () => {
-      document.removeEventListener('wheel', handleScroll);
+      editor.removeEventListener('wheel', handleScroll);
+
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -141,6 +149,7 @@ export const Frame: React.FC<React.PropsWithChildren<Frame>> = ({
   data,
 }) => {
   const { actions, query } = useInternalEditor();
+  console.log('frame 2', query.getNodes());
 
   if (!!json) {
     deprecationWarning('<Frame json={...} />', {

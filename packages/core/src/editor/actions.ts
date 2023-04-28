@@ -526,6 +526,19 @@ const Methods = (
       selector: NodeSelector<NodeSelectorType.Id>,
       cb: (props: any) => void
     ) {
+      const selectedNodes = [...selector];
+
+      // Add linked breakpoint nodes
+      selectedNodes.forEach((nodeId) => {
+        const node = query.node(nodeId).get();
+        if (!node) return;
+
+        const breakpointNodes = Object.values(node.data.breakpointNodes);
+        if (!breakpointNodes) return;
+
+        selectedNodes.push(...breakpointNodes);
+      });
+
       const targets = getNodesFromSelector(state.nodes, selector, {
         idOnly: true,
         existOnly: true,
@@ -576,6 +589,29 @@ const Methods = (
      * @param position
      */
     setPosition(id: NodeId, position: Position) {
+      // Update position of breakpoint nodes with identical poision
+      const node = query.node(id).get();
+      const breakpointNodes = node.data.breakpointNodes;
+
+      if (breakpointNodes) {
+        const currentBreakpoint = query.node(id).breakpoint();
+
+        // Not a root breakpoint node
+        const isNotBreakpointRoot = Object.values(state.breakpoints).every(
+          (breakpoint) => {
+            return breakpoint.nodeId !== id;
+          }
+        );
+
+        // Update all breakpoints if root brakpoint
+        if (isNotBreakpointRoot && currentBreakpoint === 'ROOT') {
+          Object.values(breakpointNodes).forEach((nodeId) => {
+            if (nodeId === id) return;
+            state.nodes[nodeId].data.position = position;
+          });
+        }
+      }
+
       state.nodes[id].data.position = position;
     },
 

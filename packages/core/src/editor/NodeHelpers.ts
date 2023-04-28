@@ -132,7 +132,7 @@ export function NodeHelpers(state: EditorState, id: NodeId) {
       }
       return appendChildNode(id);
     },
-    breakpoint() {
+    breakpoint(): string | null {
       const breakpoints = state.breakpoints;
 
       const parents = this.ancestors(true);

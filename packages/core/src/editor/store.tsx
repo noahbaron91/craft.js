@@ -25,7 +25,7 @@ export const editorInitialState: EditorState = {
     MOBILE: { width: 480, nodeId: null },
   },
   options: {
-    viewport: { scale: 0.2, transformX: 0, transformY: 0 },
+    viewport: { scale: 0.3625, transformX: 0, transformY: 0 },
     onNodesChange: () => null,
     onRender: ({ render }) => render,
     onBeforeMoveEnd: () => null,
