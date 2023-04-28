@@ -149,7 +149,6 @@ export const Frame: React.FC<React.PropsWithChildren<Frame>> = ({
   data,
 }) => {
   const { actions, query } = useInternalEditor();
-  console.log('frame 2', query.getNodes());
 
   if (!!json) {
     deprecationWarning('<Frame json={...} />', {

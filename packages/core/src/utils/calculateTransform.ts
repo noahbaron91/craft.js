@@ -1,14 +1,23 @@
 import { EditorStore } from '../editor/store';
 import { NodeId } from '../interfaces';
 
+type Settings = {
+  customParent?: NodeId;
+  initialXPosition?: number;
+  initialYPosition?: number;
+};
+
+type CallbackProps = {
+  left: number;
+  top: number;
+};
+
 export function calculateTransform(
   store: EditorStore,
   id: NodeId,
   event: MouseEvent,
-  cb: (translateX: number, translateY) => void,
-  customParent?: NodeId,
-  initialXPosition?: number,
-  initialYPosition?: number
+  cb: ({ left, top }: CallbackProps) => void,
+  { customParent, initialXPosition, initialYPosition }: Settings
 ) {
   event.preventDefault();
 
@@ -36,5 +45,5 @@ export function calculateTransform(
   const translateY =
     -y / scale + event.clientY / scale - initialYPosition / scale;
 
-  cb(translateX, translateY);
+  cb({ left: translateX, top: translateY });
 }
