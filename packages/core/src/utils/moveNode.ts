@@ -1,5 +1,6 @@
 import { EditorStore } from '../editor';
 import { Node, NodeId, NodeTree } from '../interfaces';
+import { calculateTransform } from '../utils/calculateTransform';
 
 export function createCustomBreakpointTree(
   store: EditorStore,
@@ -59,6 +60,7 @@ export function createCustomBreakpointTree(
  * @param cb
  */
 export function moveNode(
+  event: MouseEvent,
   store: EditorStore,
   selector: string,
   newParentId: NodeId,
@@ -98,19 +100,42 @@ export function moveNode(
     store.actions.move(selector, newParentId, index);
   }
 
+  const isMovingIntoDifferentBreakpoint =
+    currentBreakpoint &&
+    targetBreakpoint &&
+    currentBreakpoint !== targetBreakpoint;
+
   // Moving from a breakpoint into root
   if (currentBreakpoint && !targetBreakpoint) {
     store.actions.removeBreakpointNodes(selector);
 
-    store.actions.move(selector, newParentId, index);
+    // Set position to new cursor position
+    calculateTransform(
+      store,
+      selector,
+      event,
+      ({ left, top }) => {
+        store.actions.move(selector, newParentId, undefined, { top, left });
+      },
+      {
+        customParent: newParentId,
+      }
+    );
   }
 
-  // Moving from breakpoint into a new breakpoint
+  // Moving from breakpoint into a existing breakpoint
   if (currentBreakpoint && targetBreakpoint) {
     const targetBreakointNodes = store.query.node(newParentId).get().data
       .breakpointNodes;
     const currentBreakpointNodes = store.query.node(selector).get().data
       .breakpointNodes;
+
+    // If not moving into same breakpoint then select the existing linked node of that breakpoint
+    if (isMovingIntoDifferentBreakpoint) {
+      const newSelectedId = currentBreakpointNodes[targetBreakpoint];
+      store.actions.selectNode(newSelectedId);
+      return;
+    }
 
     const moveElements = Object.entries(currentBreakpointNodes).map(
       ([breakpoint, selector]) => ({
