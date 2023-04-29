@@ -1,5 +1,5 @@
 import { ROOT_NODE, isChromium, isLinux } from '@noahbaron91/utils';
-import { isFunction } from 'lodash';
+import { isFunction, throttle } from 'lodash';
 import React from 'react';
 
 import { CoreEventHandlers, CreateHandlerOptions } from './CoreEventHandlers';
@@ -65,6 +65,9 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             e.craft.stopPropagation();
 
             let newSelectedElementIds = [];
+
+            // Don't select when panning or right click
+            if (e.button !== 0) return;
 
             if (id) {
               const { query } = store;
@@ -253,7 +256,9 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           cb(translateX, translateY);
         };
 
-        const handleDragElement = (event: MouseEvent) => {
+        const handleDragElement = throttle((event: MouseEvent) => {
+          event.preventDefault();
+
           if (!store.query.getEvent('dragged').contains(id)) return;
           if (id === ROOT_NODE) return;
 
@@ -290,24 +295,39 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
               // Not located inside a breakpoint
               if (!store.query.node(topLevelOverlappedElement).breakpoint()) {
-                moveNode(store, id, topLevelOverlappedElement, undefined);
+                moveNode(
+                  event,
+                  store,
+                  id,
+                  topLevelOverlappedElement,
+                  undefined
+                );
                 return;
               }
 
-              moveNode(store, id, topLevelOverlappedElement, undefined, () => {
-                const elementBreakpointNodes = store.query.node(id).get().data
-                  .breakpointNodes;
-
-                calculateTransform(
-                  event,
-                  (left, top) => {
-                    Object.values(elementBreakpointNodes).forEach((nodeId) => {
-                      store.actions.setPosition(nodeId, { left, top });
-                    });
-                  },
-                  topLevelOverlappedElement
-                );
-              });
+              moveNode(
+                event,
+                store,
+                id,
+                topLevelOverlappedElement,
+                undefined,
+                () => {
+                  const elementBreakpointNodes = store.query.node(id).get().data
+                    .breakpointNodes;
+                  console.log('move node');
+                  calculateTransform(
+                    event,
+                    (left, top) => {
+                      Object.values(elementBreakpointNodes).forEach(
+                        (nodeId) => {
+                          store.actions.setPosition(nodeId, { left, top });
+                        }
+                      );
+                    },
+                    topLevelOverlappedElement
+                  );
+                }
+              );
             }
           };
 
@@ -363,7 +383,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
                   : getOverlappedNodeId(event, store, id) || ROOT_NODE;
 
                 if (overlappedNodeId) {
-                  moveNode(store, id, overlappedNodeId, 0);
+                  moveNode(event, store, id, overlappedNodeId, 0);
                 }
               }
             }
@@ -433,21 +453,26 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
               left,
             };
 
-            store.actions.setPosition(id, newPositon);
+            store.actions.history.throttle(2500).setPosition(id, newPositon);
           });
 
           checkIfDraggedOutsideOfParent();
           checkIfIndicatorIsValid();
           checkIfDraggedIntoCanvas();
           computeIndicator();
-        };
+        }, 40);
 
-        el.addEventListener('mousedown', (event) => {
+        const handleDragStart = (event: MouseEvent) => {
+          const editor = document.getElementById('editor');
+          if (!editor.contains(event.target as Node)) return;
+
+          event.preventDefault();
+
           // Only drag on left click
           if (event.button !== 0) {
-            event.preventDefault();
             return;
           }
+
           const parent = store.query.node(id).get().data.parent;
 
           if (store.query.node(parent).isIndicator()) {
@@ -457,17 +482,27 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           store.actions.setNodeEvent('dragged', id);
           event.stopPropagation();
 
+          console.log('add event listeners');
+
           window.addEventListener('mousemove', handleDragElement);
           window.addEventListener('mouseup', handleDragEnd);
-        });
+        };
 
-        const handleDragEnd = () => {
+        const handleDragEnd = (event: MouseEvent) => {
+          // const editor = document.getElementById('editor');
+          // console.log(
+          //   event.target,
+          //   event.currentTarget,
+          //   editor.contains(event.target as Node)
+          // );
+          // if (!editor.contains(event.target as Node)) return;
+
           store.actions.setNodeEvent('dragged', null);
 
           // Reset drag postition
           initialXPosition = null;
           initialYPosition = null;
-
+          console.log('drag end');
           window.removeEventListener('mousemove', handleDragElement);
           window.removeEventListener('mouseup', handleDragEnd);
 
@@ -480,7 +515,8 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             (indicator.placement.where === 'after' ? 1 : 0);
 
           const palcementId = indicator.placement.parent.id;
-          moveNode(store, id, palcementId, index);
+          console.log('got here');
+          moveNode(event, store, id, palcementId, index);
 
           // Cleanup indicator
           store.actions.setIndicator(null);
@@ -489,7 +525,17 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           this.positioner = null;
         };
 
+        // Fires when the element is moved
+        // if (store.query.getEvent('dragged').contains(id)) {
+        //   window.addEventListener('mousemove', handleDragElement);
+        // }
+
+        el.addEventListener('mousedown', handleDragStart);
+
         return () => {
+          // window.removeEventListener('mousemove', handleDragElement);
+          // window.removeEventListener('mouseup', handleDragEnd);
+          el.removeEventListener('mousedown', handleDragStart);
           // el.setAttribute('draggable', 'false');
           // unbindDragStart();
           // unbindDragEnd();

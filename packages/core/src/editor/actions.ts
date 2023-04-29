@@ -284,10 +284,20 @@ const Methods = (
       });
 
       targets.forEach(({ node }) => {
-        invariant(
-          !query.node(node.id).isTopLevelNode(),
-          ERROR_DELETE_TOP_LEVEL_NODE
+        const breakpoints = state.breakpoints;
+        const isRootBreakpoint = Object.values(breakpoints).some(
+          (breakpoint) => {
+            return breakpoint.nodeId === node.id;
+          }
         );
+
+        if (isRootBreakpoint) return;
+
+        if (node)
+          invariant(
+            !query.node(node.id).isTopLevelNode(),
+            ERROR_DELETE_TOP_LEVEL_NODE
+          );
         deleteNode(node.id);
 
         const breakpointNodes = node.data.breakpointNodes;

@@ -14,7 +14,10 @@ const RenderRootNode = () => {
   const {
     timestamp,
     viewport,
-    actions: { setViewport },
+    actions: {
+      setViewport,
+      history: { throttle },
+    },
   } = useInternalEditor((state) => ({
     timestamp:
       state.nodes[ROOT_NODE] && state.nodes[ROOT_NODE]._hydrationTimestamp,
@@ -34,10 +37,11 @@ const RenderRootNode = () => {
       const isVerticalScroll = Math.abs(deltaY) > Math.abs(deltaX);
 
       // Zoom in when scolling and holding ctrl or alt
+      // Ignore then debounce
       if (event.ctrlKey || event.altKey) {
         if (isVerticalScroll) {
           const SENSITIVITY = 0.0005;
-          setViewport((previousViewport) => {
+          throttle(5000).setViewport((previousViewport) => {
             let newScale = previousViewport.scale - deltaY * SENSITIVITY;
 
             if (newScale > 10) {
@@ -64,11 +68,11 @@ const RenderRootNode = () => {
         }
         // Pans viewport when not holding ctrl or alt
       } else {
-        setViewport(
+        throttle(5000).setViewport(
           (previousViewport) =>
             (previousViewport.transformX = previousViewport.transformX - deltaX)
         );
-        setViewport(
+        throttle(5000).setViewport(
           (previousViewport) =>
             (previousViewport.transformY = previousViewport.transformY - deltaY)
         );
@@ -76,7 +80,7 @@ const RenderRootNode = () => {
     }
 
     function handleMouseMove(event: MouseEvent) {
-      setViewport((previousViewport) => {
+      throttle(5000).setViewport((previousViewport) => {
         const SENSITIVITY = 0.75;
 
         previousViewport.transformX =
