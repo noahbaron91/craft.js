@@ -31,6 +31,7 @@
   },
   "homepage": "https://github.com/prevwong/craft.js/",
   "dependencies": {
+    "@noahbaron91/core": "file:.yalc/@noahbaron91/core",
     "@noahbaron91/utils": "^0.3.0",
     "react-contenteditable": "^3.3.3"
   },
@@ -40,7 +41,6 @@
     "styled-components": "4.2.1"
   },
   "peerDependencies": {
-    "@noahbaron91/core": "^0.3.4",
     "react": "^16.8.0 || ^17",
     "styled-components": ">= 4"
   }

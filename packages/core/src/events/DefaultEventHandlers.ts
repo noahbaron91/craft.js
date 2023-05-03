@@ -62,6 +62,9 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           el,
           'mousedown',
           (e) => {
+            if ((e.target as HTMLDivElement).attributes['data-indicator'])
+              return;
+
             e.craft.stopPropagation();
 
             let newSelectedElementIds = [];
@@ -464,7 +467,12 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
         const handleDragStart = (event: MouseEvent) => {
           const editor = document.getElementById('editor');
-          if (!editor.contains(event.target as Node)) return;
+
+          if (
+            (event.target as HTMLDivElement).attributes['data-indicator'] ||
+            !editor.contains(event.target as Node)
+          )
+            return;
 
           event.preventDefault();
 

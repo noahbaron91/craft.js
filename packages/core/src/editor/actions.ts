@@ -462,6 +462,26 @@ const Methods = (
       });
     },
 
+    setIndicatorEnabled(nodeId: NodeId, enabled: boolean) {
+      state.nodes[nodeId].data.isIndicator = enabled;
+
+      if (enabled) {
+        // Set transform position to current position
+        const children = query.node(nodeId).get().data.nodes;
+        children.forEach((childId) => {
+          // Get dom nodes
+          const dom = query.node(childId).get().dom;
+
+          if (dom) {
+            const transform = 'translateX(0px) translateY(0px)';
+            dom.style.transform = transform;
+          }
+
+          state.nodes[childId].data.position = { top: 0, left: 0 };
+        });
+      }
+    },
+
     replaceNodes(nodes: Nodes) {
       this.clearEvents();
       state.nodes = nodes;
@@ -586,7 +606,9 @@ const Methods = (
         existOnly: true,
       });
 
-      targets.forEach(({ node }) => cb(state.nodes[node.id].data.props));
+      targets.forEach(({ node }) => {
+        cb(state.nodes[node.id].data.props);
+      });
     },
 
     updateBreakpointId(id: NodeId, breakpointName: string) {

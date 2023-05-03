@@ -3757,7 +3757,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@noahbaron91/core@^0.3.0, @noahbaron91/core@workspace:packages/core":
+"@noahbaron91/core@0.3.5, @noahbaron91/core@^0.3.0, @noahbaron91/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@noahbaron91/core@workspace:packages/core"
   dependencies:
@@ -3773,26 +3773,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@noahbaron91/core@file:.yalc/@noahbaron91/core::locator=%40noahbaron91%2Flayers%40workspace%3Apackages%2Flayers":
-  version: 0.3.4
-  resolution: "@noahbaron91/core@file:.yalc/@noahbaron91/core#.yalc/@noahbaron91/core::hash=863b1c&locator=%40noahbaron91%2Flayers%40workspace%3Apackages%2Flayers"
-  dependencies:
-    "@noahbaron91/utils": ^0.3.2
-    debounce: ^1.2.0
-    lodash: ^4.17.20
-    tiny-invariant: ^1.0.6
-  peerDependencies:
-    react: ^16.8.0 || ^17
-  checksum: 1ab58312e4a75af15afab6f9b3d3b1d3b1d4bc9112e08f42f89abb0e24ac2ca8d60c915414bddd3d4732931633a0914d03be783586b53e8d43ac8d571e88c435
-  languageName: node
-  linkType: hard
-
 "@noahbaron91/layers@^0.3.0, @noahbaron91/layers@workspace:packages/layers":
   version: 0.0.0-use.local
   resolution: "@noahbaron91/layers@workspace:packages/layers"
   dependencies:
     "@babel/core": 7.7.4
-    "@noahbaron91/core": "file:.yalc/@noahbaron91/core"
+    "@noahbaron91/core": 0.3.5
     "@noahbaron91/utils": ^0.3.0
     "@svgr/rollup": 4.3.3
     react-contenteditable: ^3.3.3

@@ -10,14 +10,13 @@ import { useLayerManager } from '../manager';
 export const LayerEventContextProvider = ({ children }) => {
   const { store: layerStore } = useLayerManager();
   const coreEventHandler = useEventHandler();
-
-  const handler = useMemo(
-    () =>
-      coreEventHandler.derive(LayerHandlers, {
+  const handler = useMemo(() => {
+    if (coreEventHandler) {
+      return coreEventHandler.derive(LayerHandlers, {
         layerStore,
-      }),
-    [coreEventHandler, layerStore]
-  );
+      });
+    }
+  }, [coreEventHandler, layerStore]);
 
   return (
     <LayerEventHandlerContext.Provider value={handler}>
