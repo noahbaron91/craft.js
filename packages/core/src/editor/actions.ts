@@ -129,31 +129,6 @@ const Methods = (
     return parent;
   };
 
-  const getLinkedBreakpointNodes = (
-    nodeId: NodeSelector<NodeSelectorType.Id>
-  ) => {
-    let selectedNodes: NodeId[] = [];
-
-    if (typeof nodeId === 'string') {
-      selectedNodes = [nodeId];
-    } else {
-      selectedNodes = Array.from(nodeId);
-    }
-
-    // Add linked breakpoint nodes
-    selectedNodes.forEach((nodeId) => {
-      const node = query.node(nodeId).get();
-      if (!node) return;
-
-      const breakpointNodes = node.data.breakpointNodes;
-      if (!breakpointNodes) return;
-
-      selectedNodes.push(...Object.values(breakpointNodes));
-    });
-
-    return selectedNodes;
-  };
-
   const deleteNode = (id: NodeId) => {
     const targetNode = state.nodes[id],
       parentNode = state.nodes[targetNode.data.parent];
@@ -315,6 +290,12 @@ const Methods = (
 
       const nodePairs = Object.keys(dehydratedNodes).map((id) => {
         let nodeId = id;
+
+        const breakpoint = dehydratedNodes[id].custom.breakpoint;
+
+        if (breakpoint) {
+          this.updateBreakpointId(id, breakpoint);
+        }
 
         if (id === DEPRECATED_ROOT_NODE) {
           nodeId = ROOT_NODE;
@@ -599,15 +580,35 @@ const Methods = (
       selector: NodeSelector<NodeSelectorType.Id>,
       cb: (props: any) => void
     ) {
-      const selectedNodes = getLinkedBreakpointNodes(selector);
+      let selectedId;
 
-      const targets = getNodesFromSelector(state.nodes, selectedNodes, {
+      if (typeof selector === 'string') selectedId = selector;
+      if (Array.isArray(selector)) selectedId = selector[0];
+
+      const breakpointNodeIds = state.nodes[selectedId].data.breakpointNodes
+        ? Object.values(state.nodes[selectedId].data.breakpointNodes)
+        : [];
+
+      const targets = getNodesFromSelector(state.nodes, selector, {
         idOnly: true,
         existOnly: true,
       });
 
+      const breakpointNodes = getNodesFromSelector(
+        state.nodes,
+        breakpointNodeIds,
+        {
+          idOnly: true,
+          existOnly: true,
+        }
+      );
+
       targets.forEach(({ node }) => {
         cb(state.nodes[node.id].data.props);
+      });
+
+      breakpointNodes.forEach(({ node }) => {
+        node.data.props = state.nodes[selectedId].data.props;
       });
     },
 
