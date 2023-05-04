@@ -117,7 +117,7 @@ const RenderRootNode = () => {
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [setViewport]);
+  }, [setViewport, throttle]);
 
   if (!timestamp) {
     return null;
