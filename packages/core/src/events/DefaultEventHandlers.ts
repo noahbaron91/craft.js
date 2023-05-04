@@ -317,7 +317,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
                 () => {
                   const elementBreakpointNodes = store.query.node(id).get().data
                     .breakpointNodes;
-                  console.log('move node');
+
                   calculateTransform(
                     event,
                     (left, top) => {
@@ -466,6 +466,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
         }, 40);
 
         const handleDragStart = (event: MouseEvent) => {
+          document.body.style.userSelect = 'none';
           const editor = document.getElementById('editor');
 
           if (
@@ -490,27 +491,19 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           store.actions.setNodeEvent('dragged', id);
           event.stopPropagation();
 
-          console.log('add event listeners');
-
           window.addEventListener('mousemove', handleDragElement);
           window.addEventListener('mouseup', handleDragEnd);
         };
 
         const handleDragEnd = (event: MouseEvent) => {
-          // const editor = document.getElementById('editor');
-          // console.log(
-          //   event.target,
-          //   event.currentTarget,
-          //   editor.contains(event.target as Node)
-          // );
-          // if (!editor.contains(event.target as Node)) return;
+          document.body.style.userSelect = 'auto';
 
           store.actions.setNodeEvent('dragged', null);
 
           // Reset drag postition
           initialXPosition = null;
           initialYPosition = null;
-          console.log('drag end');
+
           window.removeEventListener('mousemove', handleDragElement);
           window.removeEventListener('mouseup', handleDragEnd);
 
@@ -523,7 +516,6 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             (indicator.placement.where === 'after' ? 1 : 0);
 
           const palcementId = indicator.placement.parent.id;
-          console.log('got here');
           moveNode(event, store, id, palcementId, index);
 
           // Cleanup indicator
@@ -541,6 +533,8 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
         el.addEventListener('mousedown', handleDragStart);
 
         return () => {
+          document.body.style.userSelect = 'auto';
+
           // window.removeEventListener('mousemove', handleDragElement);
           // window.removeEventListener('mouseup', handleDragEnd);
           el.removeEventListener('mousedown', handleDragStart);
