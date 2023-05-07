@@ -49,7 +49,8 @@ export const serializeComp = (
 
 export const serializeNode = (
   data: Omit<NodeData, 'event'>,
-  resolver: Resolver
+  resolver: Resolver,
+  { height, width }: { height: number; width: number }
 ): SerializedNode => {
   const { type, props, isCanvas, name, isIndicator, ...nodeData } = data;
 
@@ -61,5 +62,7 @@ export const serializeNode = (
   return {
     ...reducedComp,
     ...nodeData,
+    height,
+    width,
   };
 };

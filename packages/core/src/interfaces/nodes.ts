@@ -83,7 +83,7 @@ export type SerializedNode = Omit<
   NodeData,
   'type' | 'subtype' | 'name' | 'event'
 > &
-  ReducedComp;
+  ReducedComp & { height: number; width: number };
 
 export type SerializedNodes = Record<NodeId, SerializedNode>;
 
