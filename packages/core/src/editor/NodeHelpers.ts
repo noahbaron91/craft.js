@@ -257,7 +257,15 @@ export function NodeHelpers(state: EditorState, id: NodeId) {
       }
     },
     toSerializedNode() {
-      return serializeNode(node.data, state.options.resolver);
+      if (!node.dom) return;
+
+      const height = node.dom.offsetHeight;
+      const width = node.dom.offsetWidth;
+
+      return serializeNode(node.data, state.options.resolver, {
+        height,
+        width,
+      });
     },
     toNodeTree(includeOnly?: 'linkedNodes' | 'childNodes') {
       const nodes = [id, ...this.descendants(true, includeOnly)].reduce(
