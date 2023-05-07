@@ -238,8 +238,8 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
           const parent =
             customParent || store.query.node(id).ancestors(false)[0];
-
-          const parentElement = store.query.node(parent).get().dom;
+          const parentNode = store.query.node(parent).get();
+          const parentElement = parentNode.dom;
 
           const { scale } = store.query.getState().options.viewport;
           const { x, y } = parentElement.getBoundingClientRect();
@@ -488,6 +488,61 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             createIndicator(parent, event);
           }
 
+          const breakpoint = store.query.node(id).breakpoint();
+          let designlyBreakpoint = breakpoint && breakpoint.toLowerCase();
+          if (designlyBreakpoint === 'root') designlyBreakpoint = 'desktop';
+
+          if (designlyBreakpoint) {
+            const props = store.query.node(id).get().data.props;
+
+            const margin = props[designlyBreakpoint].margin;
+            const marginLeftValue = margin.left.value;
+            const marginTopValue = margin.top.value;
+
+            // Convert negative margin to position
+            if (marginLeftValue < 0 && marginTopValue < 0) {
+              store.actions.history.ignore().setPosition(id, {
+                left: marginLeftValue,
+                top: marginTopValue,
+              });
+            } else if (marginLeftValue < 0) {
+              const position = store.query.node(id).get().data.position;
+
+              store.actions.history.ignore().setPosition(id, {
+                ...position,
+                left: marginLeftValue,
+              });
+            } else if (marginTopValue < 0) {
+              const position = store.query.node(id).get().data.position;
+
+              store.actions.history.ignore().setPosition(id, {
+                ...position,
+                top: marginTopValue,
+              });
+            }
+
+            // Reset margin
+            if (marginLeftValue < 0 && marginTopValue < 0) {
+              store.actions.history.ignore().setProp(id, (props) => {
+                props[designlyBreakpoint].margin.left.value = 0;
+                props[designlyBreakpoint].margin.left.type = 'px';
+
+                props[designlyBreakpoint].margin.top.value = 0;
+                props[designlyBreakpoint].margin.top.type = 'px';
+              });
+            } else if (marginLeftValue < 0) {
+              store.actions.history.ignore().setProp(id, (props) => {
+                props[designlyBreakpoint].margin.left.value = 0;
+                props[designlyBreakpoint].margin.left.type = 'px';
+              });
+            } else if (marginTopValue < 0) {
+              store.actions.history.ignore().setProp(id, (props) => {
+                props[designlyBreakpoint].margin.top.value = 0;
+                props[designlyBreakpoint].margin.top.type = 'px';
+              });
+            }
+          }
+
           store.actions.setNodeEvent('dragged', id);
           event.stopPropagation();
 
@@ -499,6 +554,51 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           document.body.style.userSelect = 'auto';
 
           store.actions.setNodeEvent('dragged', null);
+
+          // Use negative margin when negative position is used
+          const isRootBreakpointNode = Object.values(
+            store.query.getState().breakpoints
+          ).some((breakpoint) => breakpoint.nodeId === id);
+
+          const breakpoint = store.query.node(id).breakpoint();
+
+          let designlyBreakpoint = breakpoint && breakpoint.toLowerCase();
+          if (designlyBreakpoint === 'root') designlyBreakpoint = 'desktop';
+
+          if (!isRootBreakpointNode && designlyBreakpoint) {
+            const position = store.query.node(id).get().data.position;
+
+            if (position.left < 0) {
+              store.actions.setProp(id, (props) => {
+                props[designlyBreakpoint].margin.left.value = position.left;
+                props[designlyBreakpoint].margin.left.type = 'px';
+              });
+            }
+
+            if (position.top < 0) {
+              store.actions.setProp(id, (props) => {
+                props[designlyBreakpoint].margin.top.value = position.top;
+                props[designlyBreakpoint].margin.top.type = 'px';
+              });
+            }
+
+            if (position.top < 0 && position.left < 0) {
+              store.actions.history.ignore().setPosition(id, {
+                left: 0,
+                top: 0,
+              });
+            } else if (position.top < 0) {
+              store.actions.history.ignore().setPosition(id, {
+                ...position,
+                top: 0,
+              });
+            } else if (position.left < 0) {
+              store.actions.history.ignore().setPosition(id, {
+                ...position,
+                left: 0,
+              });
+            }
+          }
 
           // Reset drag postition
           initialXPosition = null;
