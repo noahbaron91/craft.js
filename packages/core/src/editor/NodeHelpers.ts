@@ -14,7 +14,12 @@ import {
 } from '@noahbaron91/utils';
 import invariant from 'tiny-invariant';
 
-import { EditorState, NodeId, NodeSelector } from '../interfaces';
+import {
+  BreakpointName,
+  EditorState,
+  NodeId,
+  NodeSelector,
+} from '../interfaces';
 import { getNodesFromSelector } from '../utils/getNodesFromSelector';
 import { serializeNode } from '../utils/serializeNode';
 
@@ -132,9 +137,10 @@ export function NodeHelpers(state: EditorState, id: NodeId) {
       }
       return appendChildNode(id);
     },
-    breakpoint(): string | null {
-      const breakpoints = state.breakpoints;
+    breakpoint(): BreakpointName {
+      if (!node) return null;
 
+      const breakpoints = state.breakpoints;
       const parents = this.ancestors(true);
 
       let foundBreakpoint = null;

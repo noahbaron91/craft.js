@@ -1,4 +1,4 @@
-import { ROOT_NODE, useEffectOnce } from '@noahbaron91/utils';
+import { useEffectOnce } from '@noahbaron91/utils';
 import React from 'react';
 
 import { DefaultRender } from './DefaultRender';
@@ -27,6 +27,7 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
     breakpoints,
     parentIsIndicator,
     actions: { addBreakpointNode },
+    query: { node },
   } = useInternalEditor((state) => ({
     onRender: state.options.onRender,
     breakpoints: state.breakpoints,
@@ -53,21 +54,48 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
     }
   });
 
+  const isRootBreakpoint = Object.values(breakpoints).find(
+    (breakpoint) => breakpoint.nodeId === id
+  );
+
+  const breakpoint = node(id).breakpoint();
+
   if (dom && !parentIsIndicator) {
-    if (parent === ROOT_NODE) {
-      dom.style.position = 'fixed';
-    } else {
-      dom.style.position = 'absolute';
-    }
+    // Check if draggable (parent is a canvas)
 
     if (isDragging) {
       dom.style.zIndex = '100000';
+
+      if (parent && node(parent) && node(parent).get().data.isCanvas) {
+        dom.style.position = 'absolute';
+
+        if (breakpoint && !isRootBreakpoint) {
+          dom.style.top = `${top}px`;
+          dom.style.left = `${left}%`;
+        } else {
+          dom.style.top = `${top}px`;
+          dom.style.left = `${left}px`;
+        }
+      }
     } else {
+      if (!breakpoint || isRootBreakpoint) {
+        dom.style.position = 'absolute';
+        dom.style.top = `${top}px`;
+        dom.style.left = `${left}px`;
+      } else {
+        // dom.style.position = 'relative';
+
+        // dom.style.top = '0';
+        // dom.style.left = '0';
+
+        dom.style.position = 'absolute';
+        dom.style.top = `${top}px`;
+        dom.style.left = `${left}%`;
+      }
+
       dom.style.zIndex = 'auto';
     }
 
-    const transform = `translateX(${left}px) translateY(${top}px)`;
-    dom.style.transform = transform;
     // Fixes weird line artifacts when dragging
     dom.style.backfaceVisibility = 'hidden';
   }

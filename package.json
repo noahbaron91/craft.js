@@ -4,6 +4,7 @@
   "author": "Prev Wong <prevwong@gmail.com>",
   "scripts": {
     "dev": "./scripts/dev.sh",
+    "reinstall": "yalc remove @noahbaron91/core && yalc remove @noahbaron91/layers && yalc add @noahbaron91/core && yalc add @noahbaron91/layers && npm i && npm run dev",
     "dev:site": "lerna run start --scope site",
     "dev:all": "run-p dev dev:site",
     "dev:yalc": "lerna run dev:yalc --parallel",

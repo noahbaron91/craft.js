@@ -1,16 +1,15 @@
-import { getRandomId } from '@noahbaron91/utils';
-
-import { EditorStore } from '../editor/store';
+import { EditorStore } from '../editor';
 import { Node, NodeTree } from '../interfaces';
 
-export const cloneNodeTree = (
+export const createCustomBreakpointTree = (
+  store: EditorStore,
   nodeTree: NodeTree,
-  store: EditorStore
+  breakpoint: string
 ): NodeTree => {
   const newNodes = {};
 
   const changeNodeId = (node: Node, newParentId?: string) => {
-    const newNodeId = getRandomId();
+    const newNodeId = node.data.breakpointNodes[breakpoint];
 
     const childNodes = node.data.nodes.map((childId) =>
       changeNodeId(nodeTree.nodes[childId], newNodeId)

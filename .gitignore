@@ -23,3 +23,5 @@ cypress/screenshots/*
 .pnp.*
 
 yalc.lock
+
+devcontainer.json

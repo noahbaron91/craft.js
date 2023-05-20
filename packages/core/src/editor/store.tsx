@@ -20,9 +20,9 @@ export const editorInitialState: EditorState = {
   indicator: null,
   handlers: null,
   breakpoints: {
-    ROOT: { width: null, nodeId: 'BREAKPOINT_ROOT' },
+    ROOT: { width: 1024, nodeId: null },
     TABLET: { width: 768, nodeId: null },
-    MOBILE: { width: 480, nodeId: null },
+    MOBILE: { width: 320, nodeId: null },
   },
   options: {
     viewport: { scale: 0.3625, transformX: 0, transformY: 0 },
@@ -35,6 +35,7 @@ export const editorInitialState: EditorState = {
       error: 'red',
       success: 'rgb(98, 196, 98)',
     },
+    isSelectingEnabled: true,
     handlers: (store) =>
       new DefaultEventHandlers({
         store,

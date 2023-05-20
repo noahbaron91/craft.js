@@ -10,3 +10,4 @@ export * from './utilityTypes';
 export * from './History';
 export * from './getRandomId';
 export * from './platform';
+export * from './gridElements';

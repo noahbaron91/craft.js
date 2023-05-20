@@ -22,6 +22,7 @@ export type Options = {
   onNodesChange: (query: QueryCallbacksFor<typeof QueryMethods>) => void;
   resolver: Resolver;
   enabled: boolean;
+  isSelectingEnabled: boolean;
   indicator: Partial<{
     success: string;
     error: string;
@@ -48,7 +49,11 @@ export interface Indicator {
   error: string | null;
 }
 
-export type Breakpoints = Record<string, { width: number; nodeId: NodeId }>;
+export type BreakpointName = 'MOBILE' | 'TABLET' | 'ROOT';
+export type Breakpoints = Record<
+  BreakpointName,
+  { width: number; nodeId: NodeId }
+>;
 
 export type Viewport = {
   scale: number;

@@ -1,56 +1,11 @@
+import { cloneDeep } from 'lodash';
+
+import { createCustomBreakpointTree } from './createCustomBreakpointsTree';
+
 import { EditorStore } from '../editor';
-import { Node, NodeId, NodeTree } from '../interfaces';
+import { NodeId } from '../interfaces';
 import { calculateTransform } from '../utils/calculateTransform';
 
-export function createCustomBreakpointTree(
-  store: EditorStore,
-  nodeTree: NodeTree,
-  breakpoint: string
-): NodeTree {
-  const newNodes = {};
-
-  const changeNodeId = (node: Node, newParentId?: string) => {
-    const newNodeId = node.data.breakpointNodes[breakpoint];
-
-    const childNodes = node.data.nodes.map((childId) =>
-      changeNodeId(nodeTree.nodes[childId], newNodeId)
-    );
-
-    const linkedNodes = Object.keys(node.data.linkedNodes).reduce(
-      (accum, id) => {
-        const newLinkedNodeId = changeNodeId(
-          nodeTree.nodes[node.data.linkedNodes[id]],
-          newNodeId
-        );
-        return {
-          ...accum,
-          [id]: newLinkedNodeId,
-        };
-      },
-      {}
-    );
-
-    let tmpNode = {
-      ...node,
-      id: newNodeId,
-      data: {
-        ...node.data,
-        parent: newParentId || node.data.parent,
-        nodes: childNodes,
-        linkedNodes,
-      },
-    };
-    let freshnode = store.query.parseFreshNode(tmpNode).toNode();
-    newNodes[newNodeId] = freshnode;
-    return newNodeId;
-  };
-
-  const rootNodeId = changeNodeId(nodeTree.nodes[nodeTree.rootNodeId]);
-  return {
-    rootNodeId,
-    nodes: newNodes,
-  };
-}
 /**
  * Updates node position
  * @param store
@@ -83,6 +38,8 @@ export function moveNode(
       ([breakpointName]) => breakpointName !== targetBreakpoint
     );
 
+    const currentWidth = store.query.node(selector).get().dom.clientWidth;
+
     const breakpointTrees = filteredBreakpointNodes.map(
       ([breakpointName, breakpointParent]) => {
         const newNodeTree = createCustomBreakpointTree(
@@ -90,14 +47,48 @@ export function moveNode(
           initialNodeTree,
           breakpointName
         );
+
+        // Clone to remove read only properties
+        const nodeTreeClone = cloneDeep(newNodeTree);
+
+        const newNodeTreeId = nodeTreeClone.rootNodeId;
+        const targetBreakpointWidth = store.query.getState().breakpoints[
+          targetBreakpoint
+        ].width;
+
+        // Convert from px to vw
+        const newWidth = currentWidth / targetBreakpointWidth;
+
+        console.log({ newWidth, currentWidth, targetBreakpointWidth });
+
+        nodeTreeClone.nodes[
+          newNodeTreeId
+        ].data.props.desktop.element.width.value = newWidth;
+        nodeTreeClone.nodes[
+          newNodeTreeId
+        ].data.props.desktop.element.width.type = 'vw';
+
+        nodeTreeClone.nodes[
+          newNodeTreeId
+        ].data.props.tablet.element.width.value = null;
+        nodeTreeClone.nodes[
+          newNodeTreeId
+        ].data.props.tablet.element.width.type = null;
+
+        nodeTreeClone.nodes[
+          newNodeTreeId
+        ].data.props.mobile.element.width.value = null;
+        nodeTreeClone.nodes[
+          newNodeTreeId
+        ].data.props.mobile.element.width.type = null;
+
         // Add cloned node tree to the new parent
-        return { newNodeTree, breakpointParent, index };
+        return { newNodeTree: nodeTreeClone, breakpointParent, index };
       }
     );
 
-    store.actions.addMultipleNodeTrees(breakpointTrees);
-
-    store.actions.move(selector, newParentId, index);
+    store.actions.history.merge().addMultipleNodeTrees(breakpointTrees);
+    store.actions.history.merge().move(selector, newParentId, index);
   }
 
   const isMovingIntoDifferentBreakpoint =
@@ -107,7 +98,48 @@ export function moveNode(
 
   // Moving from a breakpoint into root
   if (currentBreakpoint && !targetBreakpoint) {
-    store.actions.removeBreakpointNodes(selector);
+    store.actions.history.merge().removeBreakpointNodes(selector);
+
+    // Update width from vw to px
+    const widthValue = store.query.node(selector).get().dom.clientWidth;
+
+    store.actions.history.merge().setProp(selector, (props) => {
+      const desktopExists =
+        'desktop' in props &&
+        'element' in props.desktop &&
+        'width' in props.desktop.element &&
+        'value' in props.desktop.element.width &&
+        'type' in props.desktop.element.width;
+
+      if (desktopExists) {
+        props.desktop.element.width.value = widthValue;
+        props.desktop.element.width.type = 'px';
+      }
+
+      const tabletExists =
+        'tablet' in props &&
+        'element' in props.desktop &&
+        'width' in props.desktop.element &&
+        'value' in props.desktop.element.width &&
+        'type' in props.desktop.element.width;
+
+      if (tabletExists) {
+        props.tablet.element.width.value = null;
+        props.tablet.element.width.type = null;
+      }
+
+      const mobileExists =
+        'tablet' in props &&
+        'element' in props.desktop &&
+        'width' in props.desktop.element &&
+        'value' in props.desktop.element.width &&
+        'type' in props.desktop.element.width;
+
+      if (mobileExists) {
+        props.mobile.element.width.value = null;
+        props.mobile.element.width.type = null;
+      }
+    });
 
     // Set position to new cursor position
     calculateTransform(
@@ -115,7 +147,9 @@ export function moveNode(
       selector,
       event,
       ({ left, top }) => {
-        store.actions.move(selector, newParentId, undefined, { top, left });
+        store.actions.history
+          .merge()
+          .move(selector, newParentId, undefined, { top, left });
       },
       {
         customParent: newParentId,

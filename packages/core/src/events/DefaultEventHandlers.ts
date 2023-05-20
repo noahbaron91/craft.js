@@ -1,4 +1,9 @@
-import { ROOT_NODE, isChromium, isLinux } from '@noahbaron91/utils';
+import {
+  ROOT_NODE,
+  isChromium,
+  isLinux,
+  CraftDOMEvent,
+} from '@noahbaron91/utils';
 import { isFunction, throttle } from 'lodash';
 import React from 'react';
 
@@ -14,9 +19,10 @@ import {
   Position,
 } from '../interfaces';
 import { cloneNodeTree } from '../utils/cloneNodeTree';
+import { createCustomBreakpointTree } from '../utils/createCustomBreakpointsTree';
 import { createRootTree } from '../utils/createRootTree';
 import { getOverlappedNodeId } from '../utils/getOverlappedNodeId';
-import { createCustomBreakpointTree, moveNode } from '../utils/moveNode';
+import { moveNode } from '../utils/moveNode';
 
 export type DefaultEventHandlersOptions = {
   isMultiSelectEnabled: (e: MouseEvent) => boolean;
@@ -62,6 +68,12 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           el,
           'mousedown',
           (e) => {
+            const isSelectingEnabled = store.query.getOptions()
+              .isSelectingEnabled;
+
+            // Selecting is disabled when drag creating a new element`
+            if (!isSelectingEnabled) return;
+
             if ((e.target as HTMLDivElement).attributes['data-indicator'])
               return;
 
@@ -234,8 +246,6 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           cb: (translateX: number, translateY) => void,
           customParent?: NodeId
         ) => {
-          event.preventDefault();
-
           const parent =
             customParent || store.query.node(id).ancestors(false)[0];
           const parentNode = store.query.node(parent).get();
@@ -256,7 +266,22 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           const translateY =
             -y / scale + event.clientY / scale - initialYPosition / scale;
 
-          cb(translateX, translateY);
+          const node = store.query.node(id);
+
+          if (!node || !node.get() || !node.get().data)
+            return cb(translateX, translateY);
+
+          const isRootBreakpoint = Object.values(
+            store.query.getState().breakpoints
+          ).some((breapoint) => breapoint.nodeId === id);
+
+          const currentBreakpoint = node.breakpoint();
+
+          if (!currentBreakpoint || isRootBreakpoint) {
+            return cb(translateX, translateY);
+          }
+
+          cb((translateX / parentElement.clientWidth) * 100, translateY);
         };
 
         const handleDragElement = throttle((event: MouseEvent) => {
@@ -279,11 +304,12 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
               id
             );
 
-            const parent = store.query.node(id).get().data.parent;
+            const isAncestor = store.query
+              .node(id)
+              .ancestors(true)
+              .includes(topLevelOverlappedElement);
 
-            const canMoveIn =
-              !!topLevelOverlappedElement &&
-              parent !== topLevelOverlappedElement;
+            const canMoveIn = !!topLevelOverlappedElement && !isAncestor;
 
             if (canMoveIn) {
               // Check if an indicator
@@ -465,17 +491,35 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           computeIndicator();
         }, 40);
 
-        const handleDragStart = (event: MouseEvent) => {
-          document.body.style.userSelect = 'none';
-          const editor = document.getElementById('editor');
+        const handleDragStart = (event: CraftDOMEvent<MouseEvent>) => {
+          const isSelectingEnabled = store.query.getOptions()
+            .isSelectingEnabled;
 
+          if (!isSelectingEnabled) return;
+
+          // If a text element is selected and a selection exists, don't drag
+          const isTextElement =
+            store.query.node(id).get().data.displayName === 'Text';
+
+          if (isTextElement) {
+            const selection = window.getSelection();
+
+            if (selection.rangeCount !== 0) {
+              const range = selection.getRangeAt(0);
+              // Check if editing element
+              if (el.contains(range.commonAncestorContainer)) {
+                console.log('is editing still');
+                return;
+              }
+            }
+          }
+
+          const editor = document.getElementById('editor');
           if (
             (event.target as HTMLDivElement).attributes['data-indicator'] ||
             !editor.contains(event.target as Node)
           )
             return;
-
-          event.preventDefault();
 
           // Only drag on left click
           if (event.button !== 0) {
@@ -492,67 +536,14 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
           let designlyBreakpoint = breakpoint && breakpoint.toLowerCase();
           if (designlyBreakpoint === 'root') designlyBreakpoint = 'desktop';
 
-          if (designlyBreakpoint) {
-            const props = store.query.node(id).get().data.props;
-
-            const margin = props[designlyBreakpoint].margin;
-            const marginLeftValue = margin.left.value;
-            const marginTopValue = margin.top.value;
-
-            // Convert negative margin to position
-            if (marginLeftValue < 0 && marginTopValue < 0) {
-              store.actions.history.ignore().setPosition(id, {
-                left: marginLeftValue,
-                top: marginTopValue,
-              });
-            } else if (marginLeftValue < 0) {
-              const position = store.query.node(id).get().data.position;
-
-              store.actions.history.ignore().setPosition(id, {
-                ...position,
-                left: marginLeftValue,
-              });
-            } else if (marginTopValue < 0) {
-              const position = store.query.node(id).get().data.position;
-
-              store.actions.history.ignore().setPosition(id, {
-                ...position,
-                top: marginTopValue,
-              });
-            }
-
-            // Reset margin
-            if (marginLeftValue < 0 && marginTopValue < 0) {
-              store.actions.history.ignore().setProp(id, (props) => {
-                props[designlyBreakpoint].margin.left.value = 0;
-                props[designlyBreakpoint].margin.left.type = 'px';
-
-                props[designlyBreakpoint].margin.top.value = 0;
-                props[designlyBreakpoint].margin.top.type = 'px';
-              });
-            } else if (marginLeftValue < 0) {
-              store.actions.history.ignore().setProp(id, (props) => {
-                props[designlyBreakpoint].margin.left.value = 0;
-                props[designlyBreakpoint].margin.left.type = 'px';
-              });
-            } else if (marginTopValue < 0) {
-              store.actions.history.ignore().setProp(id, (props) => {
-                props[designlyBreakpoint].margin.top.value = 0;
-                props[designlyBreakpoint].margin.top.type = 'px';
-              });
-            }
-          }
-
+          event.craft.stopPropagation();
           store.actions.setNodeEvent('dragged', id);
-          event.stopPropagation();
 
           window.addEventListener('mousemove', handleDragElement);
           window.addEventListener('mouseup', handleDragEnd);
         };
 
         const handleDragEnd = (event: MouseEvent) => {
-          document.body.style.userSelect = 'auto';
-
           store.actions.setNodeEvent('dragged', null);
 
           // Use negative margin when negative position is used
@@ -567,20 +558,6 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
           if (!isRootBreakpointNode && designlyBreakpoint) {
             const position = store.query.node(id).get().data.position;
-
-            if (position.left < 0) {
-              store.actions.setProp(id, (props) => {
-                props[designlyBreakpoint].margin.left.value = position.left;
-                props[designlyBreakpoint].margin.left.type = 'px';
-              });
-            }
-
-            if (position.top < 0) {
-              store.actions.setProp(id, (props) => {
-                props[designlyBreakpoint].margin.top.value = position.top;
-                props[designlyBreakpoint].margin.top.type = 'px';
-              });
-            }
 
             if (position.top < 0 && position.left < 0) {
               store.actions.history.ignore().setPosition(id, {
@@ -629,12 +606,10 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
         // if (store.query.getEvent('dragged').contains(id)) {
         //   window.addEventListener('mousemove', handleDragElement);
         // }
-
-        el.addEventListener('mousedown', handleDragStart);
+        this.addCraftEventListener(el, 'mousedown', handleDragStart);
+        // el.addEventListener('mousedown', handleDragStart);
 
         return () => {
-          document.body.style.userSelect = 'auto';
-
           // window.removeEventListener('mousemove', handleDragElement);
           // window.removeEventListener('mouseup', handleDragEnd);
           el.removeEventListener('mousedown', handleDragStart);
@@ -860,10 +835,19 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
                 const translateX = -x / scale + event.clientX / scale;
                 const translateY = -y / scale + event.clientY / scale;
 
-                const position: Position = {
-                  left: translateX,
-                  top: translateY,
-                };
+                const breakpoints = store.query.getState().breakpoints;
+                const breakpointWidth = breakpoints[targetBreakpoint]?.width;
+
+                const position: Position =
+                  targetBreakpoint && breakpointWidth
+                    ? {
+                        left: (translateX / breakpointWidth) * 100,
+                        top: translateY,
+                      }
+                    : {
+                        left: translateX,
+                        top: translateY,
+                      };
 
                 // If the element is dropped into a canvas with a breakpoint
                 if (overlappedDropId && targetBreakpoint) {

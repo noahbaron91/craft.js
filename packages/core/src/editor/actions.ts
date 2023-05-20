@@ -239,7 +239,7 @@ const Methods = (
       trees: {
         newNodeTree: NodeTree;
         breakpointParent: string;
-        index: number;
+        index?: number;
         position?: Position;
       }[]
     ) {
@@ -260,6 +260,7 @@ const Methods = (
 
       targets.forEach(({ node }) => {
         const breakpoints = state.breakpoints;
+
         const isRootBreakpoint = Object.values(breakpoints).some(
           (breakpoint) => {
             return breakpoint.nodeId === node.id;
@@ -268,19 +269,21 @@ const Methods = (
 
         if (isRootBreakpoint) return;
 
-        if (node)
-          invariant(
-            !query.node(node.id).isTopLevelNode(),
-            ERROR_DELETE_TOP_LEVEL_NODE
-          );
+        invariant(
+          !query.node(node.id).isTopLevelNode(),
+          ERROR_DELETE_TOP_LEVEL_NODE
+        );
+
         deleteNode(node.id);
 
         const breakpointNodes = node.data.breakpointNodes;
 
-        Object.values(breakpointNodes).forEach((nodeId) => {
-          if (nodeId === node.id) return;
-          state.nodes[nodeId] && deleteNode(nodeId);
-        });
+        if (breakpointNodes) {
+          Object.values(breakpointNodes).forEach((nodeId) => {
+            if (nodeId === node.id) return;
+            state.nodes[nodeId] && deleteNode(nodeId);
+          });
+        }
       });
     },
 
