@@ -654,9 +654,11 @@ const Methods = (
     /**
      * Updates nodes position
      * @param id
-     * @param position
+     * @param cb
      */
-    setPosition(id: NodeId, position: Position) {
+    setPosition(id: NodeId, cb: (value: Position) => Position) {
+      const position = cb(state.nodes[id].data.position);
+
       // Update position of breakpoint nodes with identical poision
       const node = query.node(id).get();
       const breakpointNodes = node.data.breakpointNodes;
@@ -688,7 +690,38 @@ const Methods = (
           });
         }
       }
+
       state.nodes[id].data.position = position;
+    },
+
+    /**
+     * Creates indicator
+     */
+    createIndicator({
+      left,
+      top,
+      width,
+      height,
+      data,
+    }: {
+      top: number;
+      left: number;
+      width: number;
+      height: number;
+      data: string;
+    }) {
+      const element = document.createElement('div');
+      element.className = 'designly---indicator';
+
+      element.style.top = `${top}px`;
+      element.style.left = `${left}px`;
+      element.style.width = `${width}px`;
+      element.style.height = `${height}px`;
+
+      element.dataset.position = data;
+
+      const globalFrame = document.getElementById('global-frame');
+      globalFrame.appendChild(element);
     },
 
     /**

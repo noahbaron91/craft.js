@@ -59,8 +59,6 @@ export function moveNode(
         // Convert from px to vw
         const newWidth = currentWidth / targetBreakpointWidth;
 
-        console.log({ newWidth, currentWidth, targetBreakpointWidth });
-
         nodeTreeClone.nodes[
           newNodeTreeId
         ].data.props.desktop.element.width.value = newWidth;

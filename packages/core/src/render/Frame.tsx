@@ -152,6 +152,7 @@ export const Frame: React.FC<React.PropsWithChildren<Frame>> = ({
   json,
   data,
 }) => {
+  console.log('new frame 3');
   const { actions, query } = useInternalEditor();
 
   if (!!json) {

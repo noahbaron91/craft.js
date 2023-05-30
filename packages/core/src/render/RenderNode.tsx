@@ -62,10 +62,7 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
 
   if (dom && !parentIsIndicator) {
     // Check if draggable (parent is a canvas)
-
     if (isDragging) {
-      dom.style.zIndex = '100000';
-
       if (parent && node(parent) && node(parent).get().data.isCanvas) {
         dom.style.position = 'absolute';
 
@@ -83,11 +80,6 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
         dom.style.top = `${top}px`;
         dom.style.left = `${left}px`;
       } else {
-        // dom.style.position = 'relative';
-
-        // dom.style.top = '0';
-        // dom.style.left = '0';
-
         dom.style.position = 'absolute';
         dom.style.top = `${top}px`;
         dom.style.left = `${left}%`;
@@ -96,7 +88,7 @@ export const RenderNodeToElement: React.FC<React.PropsWithChildren<
       dom.style.zIndex = 'auto';
     }
 
-    // Fixes weird line artifacts when dragging
+    // Fixes line artifacts when dragging
     dom.style.backfaceVisibility = 'hidden';
   }
 

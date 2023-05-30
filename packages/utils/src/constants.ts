@@ -2,6 +2,13 @@ export const ROOT_NODE = 'ROOT';
 export const ROOT_BREAKPOINT = 'BREAKPOINT_ROOT';
 export const DEPRECATED_ROOT_NODE = 'canvas-ROOT';
 
+export const TOP_INDICATOR_NAME = 'parent-top';
+export const BOTTOM_INDICATOR_NAME = 'parent-bottom';
+export const LEFT_INDICATOR_NAME = 'parent-left';
+export const RIGHT_INDICATOR_NAME = 'parent-right';
+export const HORIZONTAL_CENTER_INDICATOR_NAME = 'parent-horizontal-center';
+export const VERTICAL_CENTER_INDICATOR_NAME = 'parent-vertical-center';
+
 // TODO: Use a better way to store/display error messages
 export const ERROR_NOPARENT = 'Parent id cannot be ommited';
 export const ERROR_DUPLICATE_NODEID =

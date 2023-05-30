@@ -3,6 +3,12 @@ import {
   isChromium,
   isLinux,
   CraftDOMEvent,
+  LEFT_INDICATOR_NAME,
+  TOP_INDICATOR_NAME,
+  HORIZONTAL_CENTER_INDICATOR_NAME,
+  RIGHT_INDICATOR_NAME,
+  BOTTOM_INDICATOR_NAME,
+  VERTICAL_CENTER_INDICATOR_NAME,
 } from '@noahbaron91/utils';
 import { isFunction, throttle } from 'lodash';
 import React from 'react';
@@ -18,11 +24,15 @@ import {
   NodeTree,
   Position,
 } from '../interfaces';
-import { cloneNodeTree } from '../utils/cloneNodeTree';
-import { createCustomBreakpointTree } from '../utils/createCustomBreakpointsTree';
-import { createRootTree } from '../utils/createRootTree';
-import { getOverlappedNodeId } from '../utils/getOverlappedNodeId';
-import { moveNode } from '../utils/moveNode';
+import {
+  cleanupIndicator,
+  createCustomBreakpointTree,
+  cloneNodeTree,
+  createRootTree,
+  getOverlappedNodeId,
+  moveNode,
+  createIndicator,
+} from '../utils';
 
 export type DefaultEventHandlersOptions = {
   isMultiSelectEnabled: (e: MouseEvent) => boolean;
@@ -214,32 +224,32 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
         let initialXPosition = null;
         let initialYPosition = null;
 
-        const createIndicator = (containerId: string, event: MouseEvent) => {
-          if (this.positioner) return;
+        // const createIndicator = (containerId: string, event: MouseEvent) => {
+        //   if (this.positioner) return;
 
-          this.dragTarget = {
-            type: 'existing',
-            nodes: [id],
-          };
+        //   this.dragTarget = {
+        //     type: 'existing',
+        //     nodes: [id],
+        //   };
 
-          this.positioner = new Positioner(this.options.store, this.dragTarget);
+        //   this.positioner = new Positioner(this.options.store, this.dragTarget);
 
-          if (!this.positioner) {
-            return;
-          }
+        //   if (!this.positioner) {
+        //     return;
+        //   }
 
-          const indicator = this.positioner.computeIndicator(
-            containerId,
-            event.clientX,
-            event.clientY
-          );
+        //   const indicator = this.positioner.computeIndicator(
+        //     containerId,
+        //     event.clientX,
+        //     event.clientY
+        //   );
 
-          if (!indicator) {
-            return;
-          }
+        //   if (!indicator) {
+        //     return;
+        //   }
 
-          store.actions.setIndicator(indicator);
-        };
+        //   store.actions.setIndicator(indicator);
+        // };
 
         const calculateTransform = (
           event: MouseEvent,
@@ -313,14 +323,14 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
             if (canMoveIn) {
               // Check if an indicator
-              const isIndicator = store.query
-                .node(topLevelOverlappedElement)
-                .isIndicator();
+              // const isIndicator = store.query
+              //   .node(topLevelOverlappedElement)
+              //   .isIndicator();
 
-              if (isIndicator) {
-                createIndicator(topLevelOverlappedElement, event);
-                return;
-              }
+              // if (isIndicator) {
+              //   createIndicator(topLevelOverlappedElement, event);
+              //   return;
+              // }
 
               // Not located inside a breakpoint
               if (!store.query.node(topLevelOverlappedElement).breakpoint()) {
@@ -349,7 +359,10 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
                     (left, top) => {
                       Object.values(elementBreakpointNodes).forEach(
                         (nodeId) => {
-                          store.actions.setPosition(nodeId, { left, top });
+                          store.actions.setPosition(nodeId, () => ({
+                            left,
+                            top,
+                          }));
                         }
                       );
                     },
@@ -455,25 +468,320 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             }
           };
 
-          // Updates drop positions while dragging
-          const computeIndicator = () => {
-            if (!this.positioner) {
-              return;
-            }
+          // Calculates indicator position when moving in relation to parent
+          const computeIndicator = (): { top: boolean; left: boolean } => {
+            let { scale } = store.query.getState().options.viewport;
+            if (scale > 1) scale = 1;
 
-            const currentIndicator = this.positioner.getIndicator();
+            // When scale is too small there are issues with snapping
+            const parent = store.query.node(id).get().data.parent;
 
-            const indicator = this.positioner.computeIndicator(
-              currentIndicator.placement.parent.id,
-              event.clientX,
-              event.clientY
-            );
+            const element = store.query.node(id).get().dom;
+            const parentElement = store.query.node(parent).get().dom;
 
-            if (!indicator) {
-              return;
-            }
+            const elementBoundingBox = element.getBoundingClientRect();
+            const parentBoundingBox = parentElement.getBoundingClientRect();
 
-            store.actions.setIndicator(indicator);
+            const calculatePositonIndicator = (): {
+              top: boolean;
+              left: boolean;
+            } => {
+              const positionRelativeToParent = (): {
+                top: boolean;
+                left: boolean;
+              } => {
+                const calculateSnappingToParent = () => {
+                  const isSnappingToLeft =
+                    Math.abs(
+                      event.clientX / scale -
+                        initialXPosition / scale -
+                        parentBoundingBox.left / scale
+                    ) < 10;
+
+                  const isSnappingToRight =
+                    Math.abs(
+                      parentBoundingBox.left / scale +
+                        parentBoundingBox.width / scale -
+                        (event.clientX / scale -
+                          initialXPosition / scale +
+                          elementBoundingBox.width / scale)
+                    ) < 10;
+
+                  const isSnappingToTop =
+                    Math.abs(
+                      event.clientY / scale -
+                        initialYPosition / scale -
+                        parentBoundingBox.top / scale
+                    ) < 10;
+
+                  const isSnappingToBottom =
+                    Math.abs(
+                      parentBoundingBox.top / scale +
+                        parentBoundingBox.height / scale -
+                        (event.clientY / scale -
+                          initialYPosition / scale +
+                          elementBoundingBox.height / scale)
+                    ) < 10;
+
+                  const parentCenterX =
+                    parentBoundingBox.left / scale +
+                    parentBoundingBox.width / 2 / scale;
+
+                  const elementCenterX =
+                    event.clientX / scale -
+                    initialXPosition / scale +
+                    elementBoundingBox.width / 2 / scale;
+
+                  const isSnappingToHorizontalCenter =
+                    Math.abs(parentCenterX - elementCenterX) < 10;
+
+                  const parentCenterY =
+                    parentBoundingBox.top / scale +
+                    parentBoundingBox.height / 2 / scale;
+
+                  const elementCenterY =
+                    event.clientY / scale -
+                    initialYPosition / scale +
+                    elementBoundingBox.height / 2 / scale;
+
+                  const isSnappingToVerticalCenter =
+                    Math.abs(parentCenterY - elementCenterY) < 10;
+
+                  return {
+                    isSnappingToLeft,
+                    isSnappingToRight,
+                    isSnappingToTop,
+                    isSnappingToBottom,
+                    isSnappingToHorizontalCenter,
+                    isSnappingToVerticalCenter,
+                  };
+                };
+
+                const {
+                  isSnappingToBottom,
+                  isSnappingToLeft,
+                  isSnappingToRight,
+                  isSnappingToTop,
+                  isSnappingToHorizontalCenter,
+                  isSnappingToVerticalCenter,
+                } = calculateSnappingToParent();
+
+                let isLockedTop = false;
+                let isLockedLeft = false;
+
+                const snapToParent = (
+                  position:
+                    | 'top'
+                    | 'bottom'
+                    | 'left'
+                    | 'right'
+                    | 'horizontal-center'
+                    | 'vertical-center'
+                ) => {
+                  switch (position) {
+                    case 'left': {
+                      const foundIndicator = document.querySelector(
+                        `[data-position="${LEFT_INDICATOR_NAME}"]`
+                      );
+
+                      if (!foundIndicator) createIndicator(store, id, 'left');
+
+                      store.actions.history
+                        .ignore()
+                        .setPosition(id, (position) => ({
+                          left: 0,
+                          top: position.top,
+                        }));
+
+                      isLockedLeft = true;
+                      break;
+                    }
+                    case 'right': {
+                      const foundIndicator = document.querySelector(
+                        `[data-position="${RIGHT_INDICATOR_NAME}"]`
+                      );
+
+                      if (!foundIndicator) createIndicator(store, id, 'right');
+
+                      const calculateLeftPosition = () => {
+                        const breakpoint = store.query.node(id).breakpoint();
+
+                        if (breakpoint) {
+                          const leftPercentagePosition =
+                            100 -
+                            (elementBoundingBox.width /
+                              parentBoundingBox.width) *
+                              100;
+
+                          return leftPercentagePosition;
+                        } else {
+                          return (
+                            parentBoundingBox.width - elementBoundingBox.width
+                          );
+                        }
+                      };
+
+                      const left = calculateLeftPosition();
+
+                      store.actions.history
+                        .ignore()
+                        .setPosition(id, (position) => ({
+                          left: left,
+                          top: position.top,
+                        }));
+
+                      isLockedLeft = true;
+                      break;
+                    }
+                    case 'top': {
+                      const foundIndicator = document.querySelector(
+                        `[data-position="${TOP_INDICATOR_NAME}"]`
+                      );
+
+                      if (!foundIndicator) createIndicator(store, id, 'top');
+
+                      store.actions.history
+                        .ignore()
+                        .setPosition(id, (position) => ({
+                          left: position.left,
+                          top: 0,
+                        }));
+
+                      isLockedTop = true;
+                      break;
+                    }
+                    case 'bottom': {
+                      const foundIndicator = document.querySelector(
+                        `[data-position="${TOP_INDICATOR_NAME}"]`
+                      );
+
+                      if (!foundIndicator) createIndicator(store, id, 'bottom');
+
+                      const topPosition =
+                        parentBoundingBox.height / scale -
+                        elementBoundingBox.height / scale;
+
+                      store.actions.history
+                        .ignore()
+                        .setPosition(id, (position) => ({
+                          left: position.left,
+                          top: topPosition,
+                        }));
+
+                      isLockedTop = true;
+
+                      break;
+                    }
+                    case 'horizontal-center': {
+                      const foundIndicator = document.querySelector(
+                        `[data-position="${HORIZONTAL_CENTER_INDICATOR_NAME}"]`
+                      );
+
+                      if (!foundIndicator)
+                        createIndicator(store, id, 'horizontal-center');
+
+                      const parentCenterX = parentBoundingBox.width / 2 / scale;
+
+                      const breakpoint = store.query.node(id).breakpoint();
+
+                      const leftPosition =
+                        parentCenterX - elementBoundingBox.width / 2 / scale;
+
+                      if (breakpoint) {
+                        const leftPercentage =
+                          (leftPosition / (parentBoundingBox.width / scale)) *
+                          100;
+
+                        store.actions.history
+                          .ignore()
+                          .setPosition(id, (position) => ({
+                            left: leftPercentage,
+                            top: position.top,
+                          }));
+                      } else {
+                        store.actions.history
+                          .ignore()
+                          .setPosition(id, (position) => ({
+                            left: leftPosition,
+                            top: position.top,
+                          }));
+                      }
+
+                      isLockedLeft = true;
+
+                      break;
+                    }
+                    case 'vertical-center': {
+                      const foundIndicator = document.querySelector(
+                        `[data-position="${VERTICAL_CENTER_INDICATOR_NAME}"]`
+                      );
+
+                      if (!foundIndicator)
+                        createIndicator(store, id, 'vertical-center');
+
+                      const parentCenterY =
+                        parentBoundingBox.height / 2 / scale;
+
+                      const topPosition =
+                        parentCenterY - elementBoundingBox.height / 2 / scale;
+
+                      store.actions.history
+                        .ignore()
+                        .setPosition(id, (position) => ({
+                          left: position.left,
+                          top: topPosition,
+                        }));
+
+                      isLockedTop = true;
+
+                      break;
+                    }
+                  }
+                };
+
+                if (isSnappingToLeft) {
+                  snapToParent('left');
+                } else {
+                  cleanupIndicator(LEFT_INDICATOR_NAME);
+                }
+
+                if (isSnappingToRight) {
+                  snapToParent('right');
+                } else {
+                  cleanupIndicator(RIGHT_INDICATOR_NAME);
+                }
+
+                if (isSnappingToTop) {
+                  snapToParent('top');
+                } else {
+                  cleanupIndicator(TOP_INDICATOR_NAME);
+                }
+
+                if (isSnappingToBottom) {
+                  snapToParent('bottom');
+                } else {
+                  cleanupIndicator(BOTTOM_INDICATOR_NAME);
+                }
+
+                if (isSnappingToHorizontalCenter) {
+                  snapToParent('horizontal-center');
+                } else {
+                  cleanupIndicator(HORIZONTAL_CENTER_INDICATOR_NAME);
+                }
+
+                if (isSnappingToVerticalCenter) {
+                  snapToParent('vertical-center');
+                } else {
+                  cleanupIndicator(VERTICAL_CENTER_INDICATOR_NAME);
+                }
+
+                return { left: isLockedLeft, top: isLockedTop };
+              };
+
+              return positionRelativeToParent();
+            };
+
+            return calculatePositonIndicator();
           };
 
           calculateTransform(event, (left, top) => {
@@ -482,13 +790,47 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
               left,
             };
 
-            store.actions.history.throttle(2500).setPosition(id, newPositon);
+            const {
+              left: lockedLeftPosition,
+              top: lockedTopPosition,
+            } = computeIndicator();
+
+            if (!lockedLeftPosition && !lockedTopPosition) {
+              store.actions.history
+                .throttle(2500)
+                .setPosition(id, () => newPositon);
+
+              return;
+            }
+
+            if (lockedLeftPosition && lockedTopPosition) return;
+
+            if (lockedLeftPosition) {
+              store.actions.history
+                .throttle(2500)
+                .setPosition(id, (position) => ({
+                  left: position.left,
+                  top: newPositon.top,
+                }));
+
+              return;
+            }
+
+            if (lockedTopPosition) {
+              store.actions.history
+                .throttle(2500)
+                .setPosition(id, (position) => ({
+                  left: newPositon.left,
+                  top: position.top,
+                }));
+
+              return;
+            }
           });
 
           checkIfDraggedOutsideOfParent();
           checkIfIndicatorIsValid();
           checkIfDraggedIntoCanvas();
-          computeIndicator();
         }, 40);
 
         const handleDragStart = (event: CraftDOMEvent<MouseEvent>) => {
@@ -507,10 +849,7 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             if (selection.rangeCount !== 0) {
               const range = selection.getRangeAt(0);
               // Check if editing element
-              if (el.contains(range.commonAncestorContainer)) {
-                console.log('is editing still');
-                return;
-              }
+              if (el.contains(range.commonAncestorContainer)) return;
             }
           }
 
@@ -526,11 +865,11 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             return;
           }
 
-          const parent = store.query.node(id).get().data.parent;
+          // const parent = store.query.node(id).get().data.parent;
 
-          if (store.query.node(parent).isIndicator()) {
-            createIndicator(parent, event);
-          }
+          // if (store.query.node(parent).isIndicator()) {
+          //   createIndicator(parent, event);
+          // }
 
           const breakpoint = store.query.node(id).breakpoint();
           let designlyBreakpoint = breakpoint && breakpoint.toLowerCase();
@@ -560,20 +899,20 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             const position = store.query.node(id).get().data.position;
 
             if (position.top < 0 && position.left < 0) {
-              store.actions.history.ignore().setPosition(id, {
+              store.actions.history.ignore().setPosition(id, () => ({
                 left: 0,
                 top: 0,
-              });
+              }));
             } else if (position.top < 0) {
-              store.actions.history.ignore().setPosition(id, {
-                ...position,
+              store.actions.history.ignore().setPosition(id, (position) => ({
+                left: position.left,
                 top: 0,
-              });
+              }));
             } else if (position.left < 0) {
-              store.actions.history.ignore().setPosition(id, {
-                ...position,
+              store.actions.history.ignore().setPosition(id, (position) => ({
+                top: position.top,
                 left: 0,
-              });
+              }));
             }
           }
 
@@ -583,6 +922,11 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
 
           window.removeEventListener('mousemove', handleDragElement);
           window.removeEventListener('mouseup', handleDragEnd);
+
+          // Cleanup indicator
+          Array.from(
+            document.getElementsByClassName('designly---indicator')
+          ).forEach((indicator) => indicator.remove());
 
           if (!this.positioner) return;
 
