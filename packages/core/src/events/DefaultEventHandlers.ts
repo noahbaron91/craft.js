@@ -473,13 +473,15 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
             let { scale } = store.query.getState().options.viewport;
             if (scale > 1) scale = 1;
 
-            // When scale is too small there are issues with snapping
-            const parent = store.query.node(id).get().data.parent;
+            const element = store.query.node(id).get();
 
-            const element = store.query.node(id).get().dom;
+            // When scale is too small there are issues with snapping
+            const parent = element.data.parent;
+            const dom = element.dom;
+
             const parentElement = store.query.node(parent).get().dom;
 
-            const elementBoundingBox = element.getBoundingClientRect();
+            const elementBoundingBox = dom.getBoundingClientRect();
             const parentBoundingBox = parentElement.getBoundingClientRect();
 
             const calculatePositonIndicator = (): {
@@ -778,7 +780,85 @@ export class DefaultEventHandlers<O = {}> extends CoreEventHandlers<
                 return { left: isLockedLeft, top: isLockedTop };
               };
 
-              return positionRelativeToParent();
+              const positionRelativeToSiblings = (): {
+                top: boolean;
+                left: boolean;
+              } => {
+                const siblings = store.query.node(parent).childNodes();
+
+                const top = element.data.position.top;
+
+                let isLockedLeft = false;
+                let isLockedTop = false;
+
+                const calculateSnappingToSibling = () => {
+                  // if top px is within 10px
+                  const snappingToSiblingBottomId = siblings.find(
+                    (siblingId) => {
+                      if (id === siblingId) return false;
+
+                      const sibling = store.query.node(siblingId).get();
+
+                      const siblingTop = sibling.data.position.top;
+                      const siblingHeight = sibling.dom.clientHeight;
+
+                      // Snap to bottom of sibling
+                      const siblingTotalTop = siblingTop + siblingHeight;
+                      console.log({
+                        top,
+                        y: event.clientY,
+                        y2: event.clientY - initialYPosition,
+                        y3: event.clientY / scale - initialYPosition / scale,
+                        siblingTotalTop,
+                        siblingHeight,
+                        siblingTop,
+                      });
+
+                      return (
+                        Math.abs(
+                          siblingTotalTop / scale -
+                            (event.clientY / scale - initialYPosition / scale)
+                        ) < 10
+                      );
+                    }
+                  );
+
+                  return {
+                    snappingToSiblingBottomId,
+                  };
+                };
+
+                const {
+                  snappingToSiblingBottomId,
+                } = calculateSnappingToSibling();
+
+                const snapToSiblingBottom = (siblingId: NodeId) => {
+                  const sibling = store.query.node(siblingId).get();
+
+                  store.actions.history
+                    .ignore()
+                    .setPosition(id, (position) => ({
+                      left: position.left,
+                      top: sibling.data.position.top + sibling.dom.clientHeight,
+                    }));
+
+                  isLockedTop = true;
+                };
+
+                if (snappingToSiblingBottomId) {
+                  snapToSiblingBottom(snappingToSiblingBottomId);
+                }
+
+                return { top: isLockedTop, left: isLockedLeft };
+              };
+
+              const relativeToParent = positionRelativeToParent();
+              const relativeToSiblings = positionRelativeToSiblings();
+
+              return {
+                top: relativeToParent.top || relativeToSiblings.top,
+                left: relativeToParent.left || relativeToSiblings.left,
+              };
             };
 
             return calculatePositonIndicator();
